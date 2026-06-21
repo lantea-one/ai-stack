@@ -214,8 +214,8 @@ services:
     environment:
       <<: *default-environment-ai-no-proxy
       AUTOMATIC1111_BASE_URL: 'http://ai-image:7860'
-      AUTOMATIC1111_CFG_SCALE: 2
-      AUTOMATIC1111_SAMPLER: 'DPM++ SDE'
+      AUTOMATIC1111_CFG_SCALE: 2.0
+      AUTOMATIC1111_SAMPLER: 'DPM++ SDE Karras'
       AUTOMATIC1111_SCHEDULER: 'Karras'
       DEFAULT_MODELS: '${STACK_OLLAMA_DEFAULT_MODEL:-${STACK_OLLAMA_MODEL_LIST:-gemma3:4b}}'
       DEFAULT_PINNED_MODELS: '${STACK_OLLAMA_MODEL_LIST:-gemma3:4b,qwen2.5-coder:7b,codegemma:2b}'
@@ -227,9 +227,9 @@ services:
       ENABLE_PERSISTENT_CONFIG: False
       ENABLE_RAG_WEB_SEARCH: True
       IMAGE_GENERATION_ENGINE: 'automatic1111'
-      IMAGE_GENERATION_MODEL: 'DreamShaper_8_pruned.safetensors'
-      IMAGE_SIZE: '400x400'
-      IMAGE_STEPS: 8
+      IMAGE_GENERATION_MODEL: 'Lykon/dreamshaper-xl-lightning'
+      IMAGE_SIZE: '1024x1024'
+      IMAGE_STEPS: 4
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
       RAG_WEB_SEARCH_ENGINE: 'searxng'
       SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
@@ -266,12 +266,7 @@ services:
     cap_add:
       - 'SYS_NICE'
     command:
-      - '--api-only'
-      - 'True'
-      - '--disable'
-      - 'webui'
-      - '--ckpt'
-      - '/mnt/models/Stable-diffusion/dreamshaper_8.safetensors'
+      - '--api'
       - '--listen'
       - '--use-ipex'
     devices:
@@ -326,6 +321,7 @@ services:
       OLLAMA_MODEL_LIST: '${STACK_OLLAMA_MODEL_LIST:-gemma3:4b,qwen2.5-coder:7b,codegemma:2b}'
       SDNEXT_FORCE_DOWNLOAD: true
       SDNEXT_HOST: 'http://ai-image:7860'
+      SDNEXT_MODEL_LIST: '${STACK_SDNEXT_MODEL_LIST:-Lykon/dreamshaper-xl-lightning}'
     image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
     networks:
       - vlan

@@ -23,7 +23,9 @@
 
 ## Localize the list of Ollama models to provision and sanitize it.
 [String[]] $ollamaModels = if ("${env:OLLAMA_MODEL_LIST}".Trim() -like '*,*') {
-    "${env:OLLAMA_MODEL_LIST}".Trim() -split ',' } else { @("${env:OLLAMA_MODEL_LIST}".Trim()) };
+    "${env:OLLAMA_MODEL_LIST}".Trim() -split ','
+}
+else { @("${env:OLLAMA_MODEL_LIST}".Trim()) };
 
 ## Sanitize the list of Ollama models by trimming whitespace and
 ## removing any empty entries, then sort the list and remove duplicates.
@@ -32,8 +34,11 @@ $ollamaModels = $ollamaModels | ForEach-Object { $_.Trim() } | Where-Object { $_
 ## Localize the SD.Next host URL and sanitize it.
 [String] $sdnextUrl = "${env:SDNEXT_HOST}".TrimEnd('/').Trim();
 
-## Determine whether we should force download the SD.Next image model.
-[bool] $forceSdDownload = if (@('1', 'ok', 'on', 't', 'true', 'yes') -contains "${env:SDNEXT_FORCE_DOWNLOAD}".Trim().ToLower()) { $true } else { $false };
+## Localize the list of SD.Next models to provision and sanitize it.
+[String[]] $sdnextModels = if ("${env:SDNEXT_MODEL_LIST}".Trim() -like '*,*') {
+    "${env:SDNEXT_MODEL_LIST}".Trim() -split ','
+}
+else { @("${env:SDNEXT_MODEL_LIST}".Trim()) };
 
 ## Ensure we have an Ollama host URL to work with.
 if ('' -eq "${ollamaUrl}".Trim()) {
@@ -71,7 +76,8 @@ try {
         ## Exit the script with a non-zero exit code to indicate an error.
         exit 1;
     }
-} catch {
+}
+catch {
 
     ## Write a message to the console indicating that the Ollama host is not reachable.
     Write-Host "ERROR: Failed to reach Ollama host [${ollamaUrl}]. Exception: $_" -ForegroundColor DarkRed;
@@ -85,7 +91,8 @@ if ($ollamaModels.Count -eq 0) {
 
     ## Write a message to the console indicating that no models were found to provision.
     Write-Host 'WARNING: No Ollama models found to provision. Please set the OLLAMA_MODEL_LIST environment variable with a comma-separated list of model names and try again.' -ForegroundColor DarkYellow;
-} else {
+}
+else {
 
     ## Write a message to the console indicating that we are starting the model provisioning process.
     Write-Host "INFO: Starting model provisioning process for ${ollamaModels.Count} Ollama models." -ForegroundColor DarkGray;
@@ -112,12 +119,14 @@ if ($ollamaModels.Count -eq 0) {
 
                 ## Write a message to the console indicating that the model was successfully provisioned.
                 Write-Host "DONE: Successfully provisioned ${model} for Ollama. Response status: $($response.status)" -ForegroundColor DarkGreen;
-            } else {
+            }
+            else {
 
                 ## Write a message to the console indicating that the model was not successfully provisioned.
                 Write-Host "ERROR: Failed to provision ${model} for Ollama. Response status: $($response.status)" -ForegroundColor DarkRed;
             }
-        } catch {
+        }
+        catch {
 
             ## Write a message to the console indicating that there was an error provisioning the model.
             Write-Host "ERROR: Failed to provision ${model} for Ollama. Exception: $_" -ForegroundColor DarkRed;
@@ -135,7 +144,7 @@ try {
     ## Execute the request against the SD.Next host to check its health status.  If the
     ## request fails, it will throw an exception that will be caught by the catch block.
     $sdnextHealthResponse =
-        Invoke-RestMethod  -ContentType 'application/json' -Method Get -TimeoutSec 10 -Uri "${sdnextUrl}/sdapi/v1/status";
+    Invoke-RestMethod -ContentType 'application/json' -Method Get -TimeoutSec 10 -Uri "${sdnextUrl}/sdapi/v1/status";
 
     ## Ensure we got a response from the SD.Next host.  If not, throw an exception to be caught by the catch block.
     if (-not $sdnextHealthResponse) {
@@ -160,7 +169,8 @@ try {
         exit 1;
     }
 
-} catch {
+}
+catch {
 
     ## Write a message to the console indicating that the SD.Next host is not reachable.
     Write-Host "ERROR: Failed to reach SD.Next host [${sdnextUrl}]. Exception: $_" -ForegroundColor DarkRed;
@@ -168,64 +178,41 @@ try {
     ## Exit the script with a non-zero exit code to indicate an error.
     exit 1;
 }
-<#
-.SYNOPSIS
-Short description
 
-.DESCRIPTION
-Long description
+if ($sdnextModels.Count -eq 0) {
 
-.PARAMETER TimeString
-Parameter description
+    ## Write a message to the console indicating that no SD.Next models were found to provision.
+    Write-Host 'WARNING: No SD.Next models found to provision. Please set the SDNEXT_MODEL_LIST environment variable with a comma-separated list of model names and try again.' -ForegroundColor DarkYellow;
+}
+else {
 
-.EXAMPLE
-An example
+    ## Write a message to the console indicating that we are starting the model provisioning process for SD.Next.
+    Write-Host "INFO: Starting model provisioning process for ${sdnextModels.Count} SD.Next models." -ForegroundColor DarkGray;
 
-.NOTES
-General notes
-#>
-## Localize the target file path for the SD.Next image model that we want to ensure is present.
-[String] $targetFile = '/mnt/models/Stable-diffusion/dreamshaper_8.safetensors';
+    ## Iterate through the list of SD.Next models and trigger their download via the API.
+    foreach ($model in $sdnextModels) {
 
-## If we're forcing a download of the SD.Next image model then we need to ensure the model doesn't exist locally.
-if ($forceSdDownload) { Remove-Item -ErrorAction SilentlyContinue -Force -Path "${targetFile}"; }
+        ## Write a message to the console indicating that we are processing the current SD.Next model.
+        Write-Host "INFO: Processing SD.Next model: ${model}" -ForegroundColor DarkGray;
 
-## Write a message to the console indicating that we are checking the status of the SD.Next image model.
-Write-Host "INFO: Checking SD.Next Image Model [${targetFile}] status..." -ForegroundColor DarkGray;
+        ## Create the request body for the SD.Next API call to download the image model.
+        $body = @{ 'sd_model_checkpoint' = $model; } | ConvertTo-Json;
 
-## If the model doesn't exist locally, we'll need to download it.
-if (-not (Test-Path $targetFile)) {
+        ## Try to trigger the download of the image model by making a request to the SD.Next API.  If the request
+        ## fails, it will throw an exception that will be caught by the catch block.
+        try {
 
-    ## Write a message to the console indicating that the model was not found
-    ## locally and we are triggering a remote download via the SD.Next API.
-    Write-Host "INFO: DreamShaper 8 not found locally at [${targetFile}]. Triggering remote SD.Next download API..." -ForegroundColor DarkYellow;
+            ## Execute the request against the SD.Next host to trigger the download of the image model.  If the request
+            ## fails, it will throw an exception that will be caught by the catch block.
+            Invoke-RestMethod -Body "${body}" -ContentType 'application/json' -Method Post -TimeoutSec 2700 -Uri "${sdnextUrl}/sdapi/v1/options";
 
-    ## Create the request body for the SD.Next API call to download the image model.
-    $body = @{
-        subpath = 'Stable-diffusion';
-        url = 'https://huggingface.co/autismanon/modeldump/blob/main/dreamshaper_8.safetensors';
-    } | ConvertTo-Json;
+            ## Write a message to the console indicating that the SD.Next image model download completed successfully.
+            Write-Host "DONE: Successfully triggered download for ${model} via SD.Next API!" -ForegroundColor DarkGreen;
+        }
+        catch {
 
-    ## Try to trigger the download of the image model by making a request to the SD.Next API.
-    ## If the request fails, it will throw an exception that will be caught by the catch block.
-    try {
-
-        ## Execute the request against the SD.Next host to trigger the download of the image model.
-        ## If the request fails, it will throw an exception that will be caught by the catch block.
-        Invoke-RestMethod -Body "${body}" -ContentType 'application/json' -Method Post -TimeoutSec 2700 -Uri "${sdnextUrl}/sdapi/v1/download";
-
-        ## Write a message to the console indicating that the SD.Next image model download completed successfully.
-        Write-Host 'DONE: SD.Next image model download completed successfully!' -ForegroundColor DarkGreen;
-    } catch {
-
-        ## Write a message to the console indicating that there was an error pulling the SD.Next image model via the API.
-        Write-Host "ERROR: Failed to pull SD.Next image model via API. Exception: $_" -ForegroundColor DarkRed;
-
-        ## Exit the script with a non-zero exit code to indicate an error.
-        exit 1;
+            ## Write a message to the console indicating that there was an error updating the SD.Next image model via the API.
+            Write-Host "ERROR: Failed to trigger download for ${model} via SD.Next API with: ${_}" -ForegroundColor DarkRed;
+        }
     }
-} else {
-
-    ## Write a message to the console indicating that the SD.Next image model is already present locally and we are skipping the download.
-    Write-Host "INFO: DreamShaper_8_pruned.safetensors is already present locally at [${targetFile}]. Skipping image model pull." -ForegroundColor DarkGray;
 }
