@@ -1,0 +1,445 @@
+## This anchor defines the default environment variables that will be used by the services in our stack. We set the
+## timezone using an environment variable with a default value of "America/New_York". This allows for easy customization
+## of the timezone for all services in the stack by simply setting the STACK_TIMEZONE environment variable when
+## running the stack. Services can also override this default environment if they need to set additional environment
+## variables or if they need to set a different timezone for some reason.
+x-default-environment: &default-environment
+  TZ: '${STACK_TIMEZONE:-America/New_York}'
+
+## This anchor defines the default DNS servers that will be used by the services in our stack. We use environment
+## variables with default values to allow for customization if needed. The DNS servers specified here are Quad9's
+## public DNS servers, which support both IPv4 and IPv6.
+x-dns: &default-dns
+  - '${STACK_DNS_IPV6_1:-2620:fe::11}'
+  - '${STACK_DNS_IPV6_2:-2620:fe::fe:11}'
+  - '${STACK_DNS_IPV4_1:-9.9.9.11}'
+  - '${STACK_DNS_IPV4_2:-149.112.112.11}'
+
+## This anchor defines the default groups that will be added to the services in our stack that require GPU access.
+## We include the "render" and "video" groups, which are commonly used for granting access to GPU devices on UNIX
+## systems. By adding these groups to the services that require GPU access, we can ensure that they have the necessary
+## permissions to access the GPU devices on the host. Services that require GPU access can use this anchor to easily
+## add these groups to their configuration, and they can also override this default if they need to add additional
+## groups or if they need to use different groups for some reason.
+x-default-groups: &default-groups []
+#  - 'render'
+#  - 'video'
+
+## This anchor defines the default settings that will be applied to all services in our stack. We include the default
+## DNS servers and set the restart policy using an environment variable with a default value of "unless-stopped". This
+## allows for easy customization of the restart policy for all services in the stack by simply setting the
+## STACK_RESTART_POLICY environment variable when running the stack. Services can also override these default
+## settings if they need to set additional settings or if they need to set a different restart policy for some reason.
+x-default-settings: &default-settings
+  dns: *default-dns
+  restart: '${STACK_RESTART_POLICY:-unless-stopped}'
+
+## This anchor defines the default environment variables for the AI services in our stack that do not require proxy
+## settings. We include the default environment variables and also set the no_proxy environment variable to exclude
+## the AI services and the stack's subnet from being proxied. This is important because we want the AI services to be
+## able to communicate with each other and with the stack's network without going through a proxy, which could cause
+## issues with connectivity and performance. Services that require proxy settings can override this default environment
+## and set their own proxy settings as needed.
+x-environment-ai-no-proxy: &default-environment-ai-no-proxy
+  <<: *default-environment
+  no_proxy: >-
+    ai-backend,
+    ai-frontend,
+    ai-image,
+    ai-model,
+    stack-ai-backend,
+    stack-ai-frontend,
+    stack-ai-image,
+    stack-ai-model,
+    stack-ai-web
+
+## Give our stack a name, which is used as the default network name prefix and container name prefix.
+name: '${STACK_NAME:-ai-stack}'
+
+## Define the networks that our stack will use. In this case, we define a single
+## network called "vlan" with specific driver options and IPAM configuration.
+networks:
+
+  ## This will be our primary network for all our services. We use the "bridge" driver and specify some driver options
+  ## to set the bridge name. We also enable both IPv4 and IPv6 support and configure the IPAM settings to define the
+  ## subnets and gateways for both IPv4 and IPv6. The network name is also set using an environment variable with a
+  ## default value of "vlan".
+  vlan:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: '${STACK_NETWORK_DEVICE_NAME:-stack-vlan0}'
+    enable_ipv4: true
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - gateway: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::1'
+          subnet: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::/64'
+        - gateway: '${STACK_SUBNET_IPV4:-10.13.1}.1'
+          subnet: '${STACK_SUBNET_IPV4:-10.13.1}.0/24'
+
+## Define the secrets that will be used by our stack. These values are stored in Docker secrets and can be used by the
+## services in our stack to securely access sensitive information, such as passwords or API keys. In this case, we
+## define a single secret for the Portainer password, which is set using an environment variable with a default value.
+## Services that require access to this secret can reference it in their configuration, and Docker will ensure that the
+## secret is securely provided to the service at runtime. They are mounted into the container at
+## "/run/secrets/<secret-name>" and can be read by the service as needed. This allows for secure management of
+## sensitive information without exposing it in the Docker Compose file or in the service's environment variables.
+secrets:
+
+  ## This secret is used by the management-portainer service to securely access the Portainer password. The value of the
+  ## secret is set using an environment variable with a default value, which allows for easy customization of the
+  ## Portainer password without exposing it in the Docker Compose file. The management-portainer service can reference
+  ## this secret in its configuration, and Docker will ensure that the secret is securely provided to the service at
+  ## runtime. This allows for secure management of the Portainer password without exposing it in the Docker Compose
+  ## file or in the service's environment variables.
+  managements-portainer-password:
+    environment: 'STACK_PORTAINER_PASSWORD'
+
+## Define the services that will be part of our stack. Each service is defined with its own configuration, including
+## the image to use, the networks it should connect to, the ports it should expose, the volumes it should mount, and
+## any environment variables it needs. We also include health checks for the services to ensure that they are running
+## properly and to allow for dependent services to wait for them to be healthy before starting. The services are
+## organized into sections for management services and AI services for better readability and organization.
+services:
+
+  #####################################################################################################################
+  ### Management Services #############################################################################################
+  #####################################################################################################################
+
+  ## Portainer is a lightweight management UI that allows you to easily manage your Docker environments. It provides a
+  ## simple and intuitive interface for managing your containers, images, networks, and volumes. In this configuration,
+  ## we set up Portainer to run in a container and connect to the Docker socket, which allows it to manage the Docker
+  ## environment on the host. We also set up a health check to ensure that Portainer is running properly and to allow
+  ## for dependent services to wait for it to be healthy before starting. The image for Portainer is specified using an
+  ## environment variable with a default value, and the network settings are configured to use the "vlan" network with
+  ## specific IP addresses for both IPv4 and IPv6. The ports for the Portainer UI are also exposed, and volumes are
+  ## mounted to allow Portainer to persist its data and to access the Docker socket and volumes on the host.
+  management-portainer:
+    <<: *default-settings
+    command: '--admin-password-file /run/secrets/managements-portainer-password'
+    healthcheck:
+      test: >
+        wget --quiet --tries=1 --timeout=5 --spider 'http://localhost:9000/api/system/status' || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 3m
+    image: '${STACK_PORTAINER_IMAGE:-docker.io/portainer/portainer-ce:alpine}'
+    networks:
+      vlan:
+        ipv4_address: '${STACK_PORTAINER_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.2}'
+        ipv6_address: '${STACK_PORTAINER_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::2}'
+    ports:
+      - '9000:9000/tcp'
+      - '9443:9443/tcp'
+    secrets:
+      - managements-portainer-password
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/var/lib/docker/volumes:/var/lib/docker/volumes'
+      - 'management-portainer-data:/data'
+
+  #####################################################################################################################
+  ### AI Services #####################################################################################################
+  #####################################################################################################################
+
+  ## Ollama is a local LLM server that allows you to run large language models on your own hardware. It provides an API
+  ## for serving language models and can be used as the backend for various AI applications. In this configuration, we
+  ## set up Ollama to run in a container and connect to the "vlan" network with specific IP addresses for both IPv4 and
+  ## IPv6. We also set up a health check to ensure that Ollama is running properly and to allow for dependent services
+  ## to wait for it to be healthy before starting. The image for Ollama is specified using an environment variable with
+  ## a default value, and we set various environment variables to configure Ollama's behavior, such as enabling support
+  ## for Intel GPUs and setting the maximum number of loaded models. We also mount a volume to allow Ollama to persist
+  ## its data. The ai-backend service is the core of our AI stack, as it serves the language models that will be used
+  ## by the other AI services in the stack.
+  ai-backend:
+    <<: *default-settings
+    cap_add:
+      - SYS_NICE
+    devices:
+      - '/dev/dri:/dev/dri'
+    environment:
+      <<: *default-environment-ai-no-proxy
+      DEVICE: 'Arc'
+      OLLAMA_FLASH_ATTENTION: 1
+      OLLAMA_HOST: '0.0.0.0'
+      OLLAMA_INTEL_GPU: true
+      OLLAMA_KEEP_ALIVE: '10m'
+      OLLAMA_MAX_LOADED_MODELS: 3
+      OLLAMA_NUM_CTX: 4096
+      OLLAMA_NUM_PARALLEL: 1
+      ONEAPI_DEVICE_SELECTOR: 'level_zero:0'
+      ZES_ENABLE_SYSMAN: 1
+    group_add: *default-groups
+    healthcheck:
+      test: >
+        timeout 1 bash -c '</dev/tcp/127.0.0.1/11434' || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 3m
+    image: '${STACK_BACKEND_IMAGE:-docker.io/uberchuckie/ollama-intel-gpu:latest}'
+    networks:
+      vlan:
+        ipv4_address: '${STACK_AI_BACKEND_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.3}'
+        ipv6_address: '${STACK_AI_BACKEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::3}'
+    privileged: true
+    volumes:
+      - 'ai-backend-data:/root/.ollama'
+
+  ## OpenWebUI is a web-based user interface for interacting with language models. It provides a simple and intuitive
+  ## interface for sending prompts to language models and receiving responses. In this configuration, we set up
+  ## OpenWebUI to run in a container and connect to the "vlan" network with specific IP addresses for both IPv4 and
+  ## IPv6. We also set up a health check to ensure that OpenWebUI is running properly and to allow for dependent
+  ## services to wait for it to be healthy before starting. The image for OpenWebUI is specified using an environment
+  ## variable with a default value, and we set various environment variables to configure its behavior, such as enabling
+  ## support for image generation and RAG web search. We also mount a volume to allow OpenWebUI to persist its data.
+  ## The ai-frontend service serves as the frontend for our AI stack, providing a user interface for interacting with
+  ## the language models served by the ai-backend service and for generating images using the ai-image service. It also
+  ## integrates with the ai-web service to provide RAG web search capabilities. The ai-frontend service depends on the
+  ## ai-backend, ai-image, ai-model, and ai-web services, and it will wait for these services to be healthy before
+  ## starting to ensure that it can function properly.
+  ai-frontend:
+    <<: *default-settings
+    depends_on:
+      ai-backend:
+        condition: service_healthy
+      ai-image:
+        condition: service_healthy
+      ai-model:
+        condition: service_completed_successfully
+      ai-web:
+        condition: service_healthy
+    environment:
+      <<: *default-environment-ai-no-proxy
+      AUTOMATIC1111_BASE_URL: 'http://ai-image:7860'
+      AUTOMATIC1111_CFG_SCALE: 2
+      AUTOMATIC1111_SAMPLER: 'DPM++ SDE'
+      AUTOMATIC1111_SCHEDULER: 'Karras'
+      DEFAULT_MODELS: '${STACK_OLLAMA_DEFAULT_MODEL:-${STACK_OLLAMA_MODEL_LIST:-gemma3:4b}}'
+      DEFAULT_PINNED_MODELS: '${STACK_OLLAMA_MODEL_LIST:-gemma3:4b,qwen2.5-coder:7b,codegemma:2b}'
+      DEFAULT_USER_AGENT: '${STACK_FRONTEND_USER_AGENT:-LocalAiStack/OpenWebUI 1.0}'
+      ENABLE_DIRECT_CONNECTIONS: True
+      ENABLE_IMAGE_GENERATION: True
+      ENABLE_OLLAMA_API: True
+      ENABLE_OPENAI_API: False
+      ENABLE_PERSISTENT_CONFIG: False
+      ENABLE_RAG_WEB_SEARCH: True
+      IMAGE_GENERATION_ENGINE: 'automatic1111'
+      IMAGE_GENERATION_MODEL: 'DreamShaper_8_pruned.safetensors'
+      IMAGE_SIZE: '400x400'
+      IMAGE_STEPS: 8
+      OLLAMA_BASE_URL: 'http://ai-backend:11434'
+      RAG_WEB_SEARCH_ENGINE: 'searxng'
+      SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
+      USER_AGENT: '${STACK_FRONTEND_USER_AGENT:-LocalAiStack/OpenWebUI 1.0}'
+      WEBUI_SECRET_KEY: '${STACK_FRONTEND_WEBUI_SECRET_KEY:?An STACK_FRONTEND_WEBUI_SECRET_KEY environment variable must be set and non-empty.}'
+    healthcheck:
+      test: >
+        timeout 1 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 3m
+    image: '${STACK_FRONTEND_IMAGE:-ghcr.io/open-webui/open-webui:latest}'
+    networks:
+      vlan:
+        ipv4_address: '${STACK_FRONTEND_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.4}'
+        ipv6_address: '${STACK_FRONTEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::4}'
+    volumes:
+      - 'ai-frontend-data:/app/backend/data'
+
+  ## SD.Next with IPEX support is a powerful image generation engine that can be used to generate images based on text
+  ## prompts. In this configuration, we set up SD.Next to run in a container and connect to the "vlan" network with
+  ## specific IP addresses for both IPv4 and IPv6. We also set up a health check to ensure that SD.Next is running
+  ## properly and to allow for dependent services to wait for it to be healthy before starting. The image for SD.Next
+  ## is specified using an environment variable with a default value, and we set various environment variables to
+  ## configure its behavior, such as enabling support for Intel GPUs and setting the API-only mode. We also mount
+  ## volumes to allow SD.Next to persist its data and to access the models and shared memory on the host. The ai-image
+  ## service serves as the image generation engine for our AI stack, providing the capability to generate images based
+  ## on text prompts sent from the ai-frontend service. It depends on the ai-backend service to provide the language
+  ## models that can be used for generating images, and it will wait for the ai-backend service to be healthy before
+  ## starting to ensure that it can function properly.
+  ai-image:
+    <<: *default-settings
+    cap_add:
+      - 'SYS_NICE'
+    command:
+      - '--api-only'
+      - 'True'
+      - '--disable'
+      - 'webui'
+      - '--ckpt'
+      - '/mnt/models/Stable-diffusion/dreamshaper_8.safetensors'
+      - '--listen'
+      - '--use-ipex'
+    devices:
+      - '/dev/dri:/dev/dri'
+    environment:
+      <<: *default-environment-ai-no-proxy
+      IPEX_FORCE_ATTENTION_SLICE: 1
+      IPEXRUN: true
+    healthcheck:
+      test: >
+        wget --quiet --tries=1 --timeout=5 'http://127.0.0.1:7860/sdapi/v1/status' || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: '${STACK_IMAGE_STARTUP_TIMEOUT:-10m}'
+    group_add: *default-groups
+    image: '${STACK_IMAGE_IMAGE:-docker.io/liutyi/sdnext-ipex:master}'
+    networks:
+      vlan:
+        ipv4_address: '${STACK_IMAGE_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.5}'
+        ipv6_address: '${STACK_IMAGE_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::5}'
+    volumes:
+      - 'ai-image-app:/app'
+      - 'ai-image-hf:/root/.cache/huggingface'
+      - 'ai-image-mount:/mnt'
+      - '/dev/shm:/dev/shm'
+    working_dir: '/app'
+
+  ## This service is a one-shot whose purpose is to load the specified language models into Ollama so that they are
+  ## available for use by the other AI services in the stack. It runs a PowerShell script that uses the Ollama API to
+  ## load the specified language models into Ollama. The ai-model service depends on the ai-backend and ai-image
+  ## services, and it will wait for these services to be healthy before starting to ensure that it can function
+  ## properly. The image for the ai-model service is specified as a PowerShell image, and we set various environment
+  ## variables to configure the script's behavior, such as the host and model list for Ollama and the host for SD.Next.
+  ## We also mount a volume to allow the script to access the models that are stored in the ai-image-mount volume and
+  ## to access the script itself from the host. The ai-model service is important for ensuring that the specified
+  ## language models are loaded into Ollama and available for use by the other AI services in the stack, which is
+  ## essential for the proper functioning of the stack as a whole.
+  ai-model:
+    <<: *default-settings
+    command:
+      - 'pwsh'
+      - '-File'
+      - '/script/ai/Get-LargeLanguageModels.ps1'
+    depends_on:
+      ai-backend:
+        condition: service_healthy
+      ai-image:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: 'http://ai-backend:11434'
+      OLLAMA_MODEL_LIST: '${STACK_OLLAMA_MODEL_LIST:-gemma3:4b,qwen2.5-coder:7b,codegemma:2b}'
+      SDNEXT_FORCE_DOWNLOAD: true
+      SDNEXT_HOST: 'http://ai-image:7860'
+    image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
+    networks:
+      - vlan
+    restart: 'no'
+    volumes:
+      - 'ai-image-mount:/mnt'
+      - './script:/script:ro'
+
+  ## SearXNG is a privacy-respecting meta-search engine that aggregates results from various search engines. In this
+  ## configuration, we set up SearXNG to run in a container and connect to the "vlan" network with specific IP
+  ## addresses for both IPv4 and IPv6. We also set up a health check to ensure that SearXNG is running properly and to
+  ## allow for dependent services to wait for it to be healthy before starting. The image for SearXNG is specified
+  ## using a default value, and we set various environment variables to configure its behavior. We also mount volumes
+  ## to allow SearXNG to persist its data and to access configuration files on the host. The ai-web service serves as
+  ## the web interface for our AI stack, providing the capability to search for information using various search
+  ## engines. It depends on the ai-backend service to provide the language models that can be used for generating
+  ## search queries, and it will wait for the ai-backend service to be healthy before starting to ensure that it can
+  ## function properly.
+  ai-web:
+    <<: *default-settings
+    environment:
+      <<: *default-environment-ai-no-proxy
+      SEARXNG_BASE_URL: 'http://ai-web:8080'
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'wget'
+        - '--quiet'
+        - '--tries=1'
+        - '--spider'
+        - 'http://127.0.0.1:8080/healthz'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 3m
+    image: 'docker.io/searxng/searxng:latest'
+    networks:
+      vlan:
+        ipv4_address: '${STACK_WEB_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.6}'
+        ipv6_address: '${STACK_WEB_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::6}'
+    volumes:
+      - 'ai-web-data:/etc/searxng'
+      - './searxng/limiter.toml:/etc/searxng/limiter.toml:ro'
+
+## Here we define our volumes.  We do so instead of mapping paths directly so we can persist data across container
+## restarts and to allow for easier management of the data used by our services. Each volume is given a name that
+## corresponds to the service that uses it, which makes it easier to understand which volume is used for which purpose.
+## For example, the "ai-backend-data" volume is used by the ai-backend service to persist its data, and the
+## "management-portainer-data" volume is used by the management-portainer service to persist its data. By defining
+## our volumes in this way, we can ensure that our services have access to the necessary data and that this data is
+## persisted across container restarts, which is essential for the proper functioning of our stack.
+##
+## Example Persisted Volume to Folder Definition:
+## ai-backend-data:
+##   driver: local
+##   driver_opts:
+##     type: 'none'
+##     device: '/path/on/host'
+##
+## Note: If you want to use bind mounts instead of named volumes, you can replace the volume definitions with bind
+##       mounts in the service definitions. For example, instead of defining a named volume "ai-backend-data" and
+##       mounting it to the ai-backend service, you could directly mount a host directory to the ai-backend service
+##       like this:
+##       ai-backend:
+##         ..
+##         volumes:
+##           - '/path/on/host:/root/.ollama'
+volumes:
+
+  ## This volume is used by the ai-backend service to persist its data, which includes the language models that are
+  ## loaded into Ollama. By using a named volume for this purpose, we can ensure that the data is persisted across
+  ## container restarts and that it is managed by Docker, which can make it easier to handle backups and data
+  ## management. The ai-backend service relies on this volume to store the language models that it serves, so it is
+  ## essential for the proper functioning of the service and the stack as a whole.
+  ai-backend-data:
+
+  ## This volume is used by the ai-frontend service to persist its data, which includes configuration files and any
+  ## other  data that the service needs to function properly. By using a named volume for this purpose, we can ensure
+  ## that the data is persisted across container restarts and that it is managed by Docker for easier handling. The
+  ## ai-frontend service relies on this volume to store its data, so it is essential for the proper functioning of the
+  ## service and the stack as a whole.
+  ai-frontend-data:
+
+  ## This volume is used by the ai-image service to persist its data, which includes the SD.Next project itself along
+  ## with its Python virtual environment and any other data that the service needs to function properly. By using a
+  ## named volume for this purpose, we can ensure that the data is persisted across container restarts and that it is
+  ## managed by Docker for easier handling. The ai-image service relies on this volume to store its data, so it is
+  ## essential for the proper functioning of the service and the stack as a whole.
+  ai-image-app:
+
+  ## This volume is used by the ai-image service to persist the Hugging Face cache, which includes any models or other
+  ## data that the service downloads from Hugging Face. By using a named volume for this purpose, we can ensure that
+  ## the cache is persisted across container restarts and that it is managed by Docker for easier handling. The ai-image
+  ## service relies on this volume to store the Hugging Face cache, so it is essential for the proper functioning of
+  ## the service and the stack as a whole.
+  ai-image-hf:
+
+  ## This volume is used by the ai-image service to access the models that are stored on the host and to allow the
+  ## ai-model service to load these models into Ollama. By using a named volume for this purpose, we can ensure that
+  ## the data is persisted across container restarts and that it is managed by Docker for easier handling. The ai-image
+  ## and ai-model services rely on this volume to access the models, so it is essential for the proper functioning of
+  ## these services and the stack as a whole.
+  ai-image-mount:
+
+  ## This volume is used by the ai-web service to persist its data, which includes configuration files and any other
+  ## data that the service needs to function properly. By using a named volume for this purpose, we can ensure that the
+  ## data is persisted across container restarts and that it is managed by Docker for easier handling. The ai-web
+  ## service relies on this volume to store its data, so it is essential for the proper functioning of the service and
+  ## the stack as a whole.
+  ai-web-data:
+
+  ## This volume is used by the management-portainer service to persist its authentication and configuration data,
+  ## which includes configuration files and any other data that the service needs to function properly. By using a
+  ## named volume for this purpose, we can ensure that the data is persisted across container restarts and that it
+  ## is managed by Docker for easier handling. The management-portainer service relies on this volume to store its
+  ## data, so it is essential for the proper functioning of the service and the stack as a whole.
+  management-portainer-data:
