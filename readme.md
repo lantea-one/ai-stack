@@ -11,12 +11,12 @@ Ollama models can be found at [https://ollama.com/library](https://ollama.com/li
 >NOTE:  Commercial and closed-source models [Gemini, ChatGPT, Claude, etc] cannot be run locally.  You may find those models in the Ollama library however they will not be run locally.  For those models you will be proxied through the Ollama cloud to run the requests directly against the models.  These cloud models are heavily limited and sometimes required a paid account.
 
 
-| Name                   | Purpose                                                                         |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `codegemma:2b`         | Standard, fast-response, code completion.                                       |
-| `gemma3:4b`            | Gemini-equivalent for general conversation, image generation and web searching. |
-| `qwen2.5-coder`        | Code conversation and complex code completion.                                  |
-| `DreamShaper-8-Pruned` | Stable diffusion image generation.                                              |
+| Name                      | Purpose                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `codegemma:2b`            | Standard, fast-response, code completion.                                       |
+| `gemma3:4b`               | Gemini-equivalent for general conversation, image generation and web searching. |
+| `qwen2.5-coder`           | Code conversation and complex code completion.                                  |
+| `DreamShaperXL_Lightning` | Stable diffusion image generation.                                              |
 
 ## Environment Variables
 
