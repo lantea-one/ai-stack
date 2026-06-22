@@ -256,6 +256,8 @@ services:
       vlan:
         ipv4_address: '${STACK_FRONTEND_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.4}'
         ipv6_address: '${STACK_FRONTEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::4}'
+    ports:
+      - '8080:8080/tcp'
     volumes:
       - 'ai-frontend-data:/app/backend/data'
 
