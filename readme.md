@@ -58,10 +58,10 @@ The other is OpenWebUI which is where most of the interaction with the LLMs will
 
 #### Hosts
 
-| Host                      | Hostname                                            | Port                   | URL                      |
-| ------------------------- | --------------------------------------------------- | ---------------------- | ------------------------ |
-| `${STACK_SUBNET_IPV4}.2`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` |
-| `${STACK_SUBNET_IPV6}::2` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` |
+| Host                      | Hostname                                            | Port                   | URL                                                   |
+| ------------------------- | --------------------------------------------------- | ---------------------- | ----------------------------------------------------- |
+| `${STACK_SUBNET_IPV4}.2`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
+| `${STACK_SUBNET_IPV6}::2` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
 
 #### Credentials
 
@@ -77,7 +77,7 @@ Credentials can be changed in the environment file, however the previous `manage
 
 | Host                      | Hostname                                            | Port       | URL                      |
 | ------------------------- | --------------------------------------------------- | ---------- | ------------------------ |
-| `${STACK_SUBNET_IPV4}.4`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `8080/tcp` | `http://localhost:9000/` |
+| `${STACK_SUBNET_IPV4}.4`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `8080/tcp` | `http://localhost:8080/` |
 | `${STACK_SUBNET_IPV6}::4` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `8080/tcp` | `http://localhost:9000/` |
 
 #### Credentials
