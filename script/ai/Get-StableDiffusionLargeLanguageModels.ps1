@@ -34,6 +34,9 @@ else { $false };
 ## Localize the SD.Next host URL and sanitize it.
 [String] $sdnextUrl = "${env:SDNEXT_HOST}".TrimEnd('/').Trim();
 
+## Localize the SD.Next model path and sanitize it.
+[String] $sdnextModelPath = "${env:SDNEXT_MODEL_PATH}".Trim();
+
 ## Localize the list of SD.Next models to provision and sanitize it.
 [String[]] $sdnextModels = if ("${env:SDNEXT_MODEL_LIST}".Trim() -like '*,*') {
     "${env:SDNEXT_MODEL_LIST}".Trim() -split ','
