@@ -8,7 +8,7 @@ for Cuda (nVidia) or ROCM (AMD).
 
 Ollama models can be found at [https://ollama.com/library](https://ollama.com/library) and Stable Diffusion models for SD.Next can be found at [https://huggingface.co/models](https://huggingface.co/models).
 
->NOTE:  Commercial-grade and closed-source models [Gemini, ChatGPT, Claude, etc] cannot be run locally.  You may find those models in the Ollama library however they will not be run locally.  For those models you will be proxied through the Ollama cloud to run the requests directly against the models.  These cloud models are heavily limited and sometimes required a paid account.
+>NOTE:  Commercial and closed-source models [Gemini, ChatGPT, Claude, etc] cannot be run locally.  You may find those models in the Ollama library however they will not be run locally.  For those models you will be proxied through the Ollama cloud to run the requests directly against the models.  These cloud models are heavily limited and sometimes required a paid account.
 
 
 | Name                       | Purpose                                                                         |
