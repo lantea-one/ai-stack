@@ -1,15 +1,12 @@
 # AI Stack
 
-This is a simple stack that stands up a full-featured AI stack that can be run on a local machine using Docker.  It's tuned specifically
-for Intel ARC devices using IPEX.  That being said, each of the technologies involved in the stack can be relatively easily re-tuned
-for Cuda (nVidia) or ROCM (AMD).
+This is a simple stack that stands up a full-featured AI stack that can be run on a local machine using Docker.  It's tuned specifically for Intel ARC devices using IPEX.  That being said, each of the technologies involved in the stack can be relatively easily re-tuned for Cuda (nVidia) or ROCM (AMD).
 
 ## Models
 
 Ollama models can be found at [https://ollama.com/library](https://ollama.com/library) and Stable Diffusion models for SD.Next can be found at [https://huggingface.co/models](https://huggingface.co/models).
 
 >NOTE:  Commercial and closed-source models [Gemini, ChatGPT, Claude, etc] cannot be run locally.  You may find those models in the Ollama library however they will not be run locally.  For those models you will be proxied through the Ollama cloud to run the requests directly against the models.  These cloud models are heavily limited and sometimes required a paid account.
-
 
 | Name                      | Purpose                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------- |
@@ -49,21 +46,20 @@ Each of the following environment variables can be overridden to control the exa
 
 ## Access
 
-The stack will automatically provision two web consoles.  One is Portainer which is a web-based management platform for Docker.
-The other is OpenWebUI which is where most of the interaction with the LLMs will occur.
+The stack will automatically provision two web consoles.  One is Portainer which is a web-based management platform for Docker.  The other is OpenWebUI which is where most of the interaction with the LLMs will occur.
 
 > NOTE: SD.Next also comes with a Web UI however it has not been exposed as it's not directly used.
 
 ### Portainer
 
-#### Hosts
+#### Portainer Hosts
 
 | Host                      | Hostname                                            | Port                   | URL                                                   |
 | ------------------------- | --------------------------------------------------- | ---------------------- | ----------------------------------------------------- |
 | `${STACK_SUBNET_IPV4}.2`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
 | `${STACK_SUBNET_IPV6}::2` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
 
-#### Credentials
+#### Portainer Credentials
 
 Credentials can be changed in the environment file, however the previous `management-portainer-data` volume must be completely purged before recreating the `management-portainer` service.
 
@@ -73,20 +69,20 @@ Credentials can be changed in the environment file, however the previous `manage
 
 ### OpenWebUI
 
-#### Hosts
+#### OpenWebUI Hosts
 
 | Host                      | Hostname                                            | Port       | URL                      |
 | ------------------------- | --------------------------------------------------- | ---------- | ------------------------ |
 | `${STACK_SUBNET_IPV4}.4`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `8080/tcp` | `http://localhost:8080/` |
 | `${STACK_SUBNET_IPV6}::4` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN} | `8080/tcp` | `http://localhost:9000/` |
 
-#### Credentials
+#### OpenWebUI Credentials
 
 Credentials can be changed in the environment file and are immediately available upon recreation of the `ai-frontend` service.
 
-| Username                 | Password                      |
-| ------------------------ | ----------------------------- |
-| `admin@${STACK_DOMAIN}`  | `${STACK_PORTAINER_PASSWORD}` |
+| Username                 | Password                                 |
+| ------------------------ | ---------------------------------------- |
+| `admin@${STACK_DOMAIN}`  | `${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD}` |
 
 ## Stack Execution
 
