@@ -163,8 +163,33 @@ else {
             Write-Host "INFO: Starting download of SD.Next model [${modelName}] from ${model}." `
                 -ForegroundColor DarkGray;
 
-            ## Download the SD.Next model from the provided URL and save it to the specified path.
-            (New-Object System.Net.WebClient).DownloadFile($model, $modelPath);
+            ## Initialize our new HTTP client.
+            $client = [System.Net.Http.HttpClient]::new()
+
+            ## Send a GET request to the SD.Next model URL and get the response stream.
+            $response = $client.GetAsync($model, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult();
+
+            ## Localize the stream from the response.
+            $responseStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+
+            ## Create a file stream to the desired model path and copy the response stream to it to save the model
+            ## directly to the volume. This approach is more efficient for large files than loading the entire file
+            ## into memory before writing it to disk.
+            $outputStream = [System.IO.File]::Create($modelPath);
+
+            ## Write a message to the console indicating that we are downloading the SD.Next model directly to the volume.
+            Write-Host "INFO: Downloading SD.Next model [${modelName}] directly to volume at [${modelPath}]." `
+                -ForegroundColor DarkGray;
+
+            ## Copy the response stream to the output file stream to save the model to disk.
+            $responseStream.CopyTo($outputStream)
+
+            ## We're done with our streams so close them.
+            $outputStream.Close();
+            $responseStream.Close();
+
+            ## We're done with our HTTP client as well, so dispose of it to free up resources.
+            $client.Dispose()
 
             ## Write a message to the console indicating that the SD.Next model was downloaded successfully.
             Write-Host "DONE: Successfully downloaded SD.Next model [${modelName}] to [${modelPath}]." `
