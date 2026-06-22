@@ -46,11 +46,13 @@ x-environment-ai-no-proxy: &default-environment-ai-no-proxy
     ai-backend,
     ai-frontend,
     ai-image,
-    ai-model,
+    ai-model-backend,
+    ai-model-image,
     stack-ai-backend,
     stack-ai-frontend,
     stack-ai-image,
-    stack-ai-model,
+    stack-ai-model-backend,
+    stack-ai-model-image,
     stack-ai-web
 
 ## Give our stack a name, which is used as the default network name prefix and container name prefix.
@@ -74,8 +76,10 @@ networks:
       driver: default
       config:
         - gateway: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::1'
+          ip_range: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}:8000::/65'
           subnet: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::/64'
         - gateway: '${STACK_SUBNET_IPV4:-10.13.1}.1'
+          ip_range: '${STACK_SUBNET_IPV4:-10.13.1}.128/25'
           subnet: '${STACK_SUBNET_IPV4:-10.13.1}.0/24'
 
 ## Define the secrets that will be used by our stack. These values are stored in Docker secrets and can be used by the
@@ -207,7 +211,9 @@ services:
         condition: service_healthy
       ai-image:
         condition: service_healthy
-      ai-model:
+      ai-model-backend:
+        condition: service_completed_successfully
+      ai-model-image:
         condition: service_completed_successfully
       ai-web:
         condition: service_healthy
@@ -227,13 +233,16 @@ services:
       ENABLE_PERSISTENT_CONFIG: False
       ENABLE_RAG_WEB_SEARCH: True
       IMAGE_GENERATION_ENGINE: 'automatic1111'
-      IMAGE_GENERATION_MODEL: 'Lykon/dreamshaper-xl-lightning'
+      IMAGE_GENERATION_MODEL: 'DreamShaperXL_Lightning-SFW.safetensors'
       IMAGE_SIZE: '1024x1024'
       IMAGE_STEPS: 4
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
       RAG_WEB_SEARCH_ENGINE: 'searxng'
       SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
       USER_AGENT: '${STACK_FRONTEND_USER_AGENT:-LocalAiStack/OpenWebUI 1.0}'
+      WEBUI_ADMIN_EMAIL: '${STACK_FRONTEND_WEBUI_ADMIN_EMAIL:?An STACK_FRONTEND_WEBUI_ADMIN_EMAIL environment variable must be set and non-empty.}'
+      WEBUI_ADMIN_PASSWORD: '${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD:?An STACK_FRONTEND_WEBUI_ADMIN_PASSWORD environment variable must be set and non-empty.}'
+      WEBUI_ADMIN_NAME: '${STACK_FRONTEND_WEBUI_ADMIN_NAME:?An STACK_FRONTEND_WEBUI_ADMIN_NAME environment variable must be set and non-empty.}'
       WEBUI_SECRET_KEY: '${STACK_FRONTEND_WEBUI_SECRET_KEY:?An STACK_FRONTEND_WEBUI_SECRET_KEY environment variable must be set and non-empty.}'
     healthcheck:
       test: >
@@ -267,8 +276,13 @@ services:
       - 'SYS_NICE'
     command:
       - '--api'
+      - '--ckpt'
+      - '/mnt/models/Stable-diffusion/DreamShaperXL_Lightning-SFW.safetensors'
       - '--listen'
       - '--use-ipex'
+    depends_on:
+      ai-model-image:
+        condition: service_completed_successfully
     devices:
       - '/dev/dri:/dev/dri'
     environment:
@@ -305,7 +319,7 @@ services:
   ## to access the script itself from the host. The ai-model service is important for ensuring that the specified
   ## language models are loaded into Ollama and available for use by the other AI services in the stack, which is
   ## essential for the proper functioning of the stack as a whole.
-  ai-model:
+  ai-model-backend:
     <<: *default-settings
     command:
       - 'pwsh'
@@ -314,14 +328,39 @@ services:
     depends_on:
       ai-backend:
         condition: service_healthy
-      ai-image:
-        condition: service_healthy
     environment:
       OLLAMA_HOST: 'http://ai-backend:11434'
       OLLAMA_MODEL_LIST: '${STACK_OLLAMA_MODEL_LIST:-gemma3:4b,qwen2.5-coder:7b,codegemma:2b}'
-      SDNEXT_FORCE_DOWNLOAD: true
+    image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
+    networks:
+      - vlan
+    restart: 'no'
+    volumes:
+      - './script:/script:ro'
+
+  ## This service is a one-shot whose purpose is to load the specified image generation models into SD.Next so that
+  ## they are available for use by the ai-image service. It runs a PowerShell script that uses the Hugging Face public
+  ## repository to download the specified image generation models and save them to the location specified by the
+  ## SDNEXT_MODEL_PATH environment variable, which is mounted into the ai-image service. The ai-model-image service.
+  ## This service should run before the ai-image service starts to ensure that the necessary models are available for
+  ## image generation. The image for the ai-model-image service is specified as a PowerShell image, and we set various
+  ## environment variables to configure the script's behavior, such as the host for SD.Next, the model list for SD.Next,
+  ## and the path where the models should be saved. We also mount volumes to allow the script to access the models that
+  ## are stored in the ai-image-mount volume and to access the script itself from the host. The ai-model-image service
+  ## is important for ensuring that the specified image generation models are downloaded and available for use by the
+  ## ai-image service, which is essential for the proper functioning of the image generation capabilities of our stack.
+  ai-model-image:
+    <<: *default-settings
+    command:
+      - 'pwsh'
+      - '-File'
+      - '/script/ai/Get-StableDiffusionLargeLanguageModels.ps1'
+    environment:
+      SDNEXT_FORCE_DOWNLOAD: '${STACK_SDNEXT_FORCE_DOWNLOAD:-true}'
       SDNEXT_HOST: 'http://ai-image:7860'
-      SDNEXT_MODEL_LIST: '${STACK_SDNEXT_MODEL_LIST:-Lykon/dreamshaper-xl-lightning}'
+      SDNEXT_MODEL_LIST: >-
+        ${STACK_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning-SFW.safetensors"}
+      SDNEXT_MODEL_PATH: '${STACK_SDNEXT_MODEL_PATH:-/mnt/models/Stable-diffusion}'
     image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
     networks:
       - vlan
