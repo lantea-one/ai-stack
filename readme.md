@@ -40,7 +40,7 @@ Each of the following environment variables can be overridden to control the exa
 | `STACK_TIMEZONE`                      | `America/New_York`                                                                                                 |
 | `STACK_OLLAMA_DEFAULT_MODEL`          | `gemma3:4b`                                                                                                        |
 | `STACK_OLLAMA_MODEL_LIST`             | `gemma3:4b,qwen2.5-coder:7b,codegemma:2b`                                                                          |
-| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning-SFW.safetensors`          |
+| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors`       |
 | `STACK_SDNEXT_MODEL_PATH`             | `/mnt/models/Stable-diffusion`                                                                                     |
 | `STACK_FRONTEND_WEBUI_ADMIN_EMAIL`    | `admin@${STACK_DOMAIN}`                                                                                            |
 | `STACK_FRONTEND_WEBUI_ADMIN_PASSWORD` | `$(openssl rand -base64 32 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`                                 |

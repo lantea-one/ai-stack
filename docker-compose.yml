@@ -361,7 +361,7 @@ services:
       SDNEXT_FORCE_DOWNLOAD: '${STACK_SDNEXT_FORCE_DOWNLOAD:-true}'
       SDNEXT_HOST: 'http://ai-image:7860'
       SDNEXT_MODEL_LIST: >-
-        ${STACK_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning-SFW.safetensors"}
+        ${STACK_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"}
       SDNEXT_MODEL_PATH: '${STACK_SDNEXT_MODEL_PATH:-/mnt/models/Stable-diffusion}'
     image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
     networks:

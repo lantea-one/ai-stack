@@ -167,7 +167,7 @@ else {
                 -ForegroundColor DarkGray;
 
             ## Use Start-BitsTransfer to download the SD.Next model from the provided URL to the specified model path.
-            Start-BitsTransfer -Destination "${modelPath}" -Source "${model}";
+            Invoke-WebRequest -OutFile "${modelPath}" -Uri "${model}";
 
             ## Write a message to the console indicating that the SD.Next model was downloaded successfully.
             Write-Host "DONE: Successfully downloaded SD.Next model [${modelName}] to [${modelPath}]." `
