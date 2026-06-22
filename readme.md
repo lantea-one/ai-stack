@@ -128,3 +128,17 @@ The commands below will tear the entire stack [or specific services] down then s
 ## Specific services.
 .\Invoke-StackComposer.ps1 -Pull -Recreate -Only @('management-portainer')
 ```
+
+## Further Reading
+
+[Ollama](https://github.com/ollama/ollama) - Frontend to `llama.cpp`.  Used to download and interact with LLMs.
+
+[SD.Next](https://github.com/vladmandic/sdnext/wiki/Docker) - Stable Diffusion image and video generation.
+
+[OpenWebUI](https://github.com/open-webui/open-webui) - Clean and modern web interface to bring everything together.
+
+[SearXNG](https://github.com/searxng/searxng) - Internet meta search engine to allow the LLMs to perform web searches.
+
+[Portainer](https://github.com/portainer/portainer) `community-edition` - Clean and modern web interface for managing Docker infrastructure.
+
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) - Orchestration software [desktop edition] used to run all of this.
