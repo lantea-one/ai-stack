@@ -278,8 +278,8 @@ services:
       - 'SYS_NICE'
     command:
       - '--api'
-      - '--ckpt'
-      - '/mnt/models/Stable-diffusion/DreamShaperXL_Lightning-SFW.safetensors'
+      - '--ckpt-dir'
+      - '/mnt/models/Stable-diffusion'
       - '--listen'
       - '--use-ipex'
     depends_on:

@@ -87,3 +87,44 @@ Credentials can be changed in the environment file and are immediately available
 | Username | Password                      |
 | -------- | ----------------------------- |
 | `admin`  | `${STACK_PORTAINER_PASSWORD}` |
+
+## Stack Execution
+
+### Creation
+
+The commands below will stand the entire stack [or specific services] up in one command.
+
+```pwsh
+
+## All services.
+.\Invoke-StackComposer.ps1 -Pull -Up
+
+## Specific services.
+.\Invoke-StackComposer.ps1 -Pull -Up -Only @('management-portainer')
+```
+
+### Teardown
+
+The commands below will tear the entire stack [or specific services] down in one command.  This action is destructive and if the volumes are not persisted then all data will be purged.
+
+```pwsh
+
+## All services.
+.\Invoke-Stack -Down -Prune
+
+## Specific services.
+.\Invoke-StackComposer.ps1 -Down -Prune -Only @('management-portainer')
+```
+
+### Recreation
+
+The commands below will tear the entire stack [or specific services] down then stand it back up in one command.
+
+```pwsh
+
+## All services.
+.\Invoke-Stack -Pull -Recreate
+
+## Specific services.
+.\Invoke-StackComposer.ps1 -Pull -Recreate -Only @('management-portainer')
+```
