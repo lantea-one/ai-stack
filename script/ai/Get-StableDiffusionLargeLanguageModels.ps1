@@ -178,6 +178,14 @@ else {
             ## Initialize our new HTTP client.
             $client = [System.Net.Http.HttpClient]::new($handler);
 
+            ## Set the Accept header to 'application/octet-stream' to
+            ## indicate that we expect binary data in the response.
+            $client.DefaultRequestHeaders.Accept.Add([System.Net.Http.Headers.MediaTypeWithQualityHeaderValue]::new('application/octet-stream'));
+
+            ## Set the User-Agent header to a common browser user agent string
+            ## to avoid potential issues with servers that may block requests from unknown clients.
+            $client.DefaultRequestHeaders.UserAgent.ParseAdd('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
             ## Give the client a reasonable timeout for downloading large model files.
             ## 60 minutes should be sufficient  for even very large models on a reasonably
             ## fast connection, but you can adjust this as needed.
