@@ -63,9 +63,9 @@ The stack will automatically provision two web consoles.  One is Portainer which
 
 Credentials can be changed in the environment file, however the previous `management-portainer-data` volume must be completely purged before recreating the `management-portainer` service.
 
-| Username | Password                      |
-| -------- | ----------------------------- |
-| `admin`  | `${STACK_PORTAINER_PASSWORD}` |
+| Username | Password                                           |
+| -------- | -------------------------------------------------- |
+| `admin`  | `ChangeMe123!!!$` or `${STACK_PORTAINER_PASSWORD}` |
 
 ### OpenWebUI
 
@@ -80,9 +80,9 @@ Credentials can be changed in the environment file, however the previous `manage
 
 Credentials can be changed in the environment file and are immediately available upon recreation of the `ai-frontend` service.
 
-| Username                 | Password                                 |
-| ------------------------ | ---------------------------------------- |
-| `admin@${STACK_DOMAIN}`  | `${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD}` |
+| Username                 | Password                                                      |
+| ------------------------ | ------------------------------------------------------------- |
+| `admin@${STACK_DOMAIN}`  | `ChangeMe123!!!$` or `${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD}` |
 
 ## Stack Execution
 
