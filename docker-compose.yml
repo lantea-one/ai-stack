@@ -220,7 +220,7 @@ services:
     environment:
       <<: *default-environment-ai-no-proxy
       AUTOMATIC1111_BASE_URL: 'http://ai-image:7860'
-      AUTOMATIC1111_CFG_SCALE: 2.0
+      AUTOMATIC1111_CFG_SCALE: 7.0
       AUTOMATIC1111_SAMPLER: 'DPM++ SDE Karras'
       AUTOMATIC1111_SCHEDULER: 'Karras'
       DEFAULT_MODELS: '${STACK_OLLAMA_DEFAULT_MODEL:-${STACK_OLLAMA_MODEL_LIST:-gemma3:4b}}'
@@ -235,7 +235,7 @@ services:
       IMAGE_GENERATION_ENGINE: 'automatic1111'
       IMAGE_GENERATION_MODEL: 'DreamShaperXL_Lightning-SFW.safetensors'
       IMAGE_SIZE: '1024x1024'
-      IMAGE_STEPS: 4
+      IMAGE_STEPS: 20
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
       RAG_WEB_SEARCH_ENGINE: 'searxng'
       SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
