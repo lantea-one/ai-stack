@@ -171,6 +171,10 @@ else {
             ## the download directly to disk without loading the entire file into memory.
             $handler = [System.Net.Http.HttpClientHandler]::new();
 
+            ## Allow automatic redirection for the HTTP client to handle
+            ## any redirects that may occur during the download process.
+            $handler.AllowAutoRedirect = $true;
+
             ## Initialize our new HTTP client.
             $client = [System.Net.Http.HttpClient]::new($handler);
 
