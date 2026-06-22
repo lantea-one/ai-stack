@@ -233,7 +233,7 @@ services:
       ENABLE_PERSISTENT_CONFIG: False
       ENABLE_RAG_WEB_SEARCH: True
       IMAGE_GENERATION_ENGINE: 'automatic1111'
-      IMAGE_GENERATION_MODEL: 'DreamShaperXL_Lightning-SFW.safetensors'
+      IMAGE_GENERATION_MODEL: 'DreamShaper_8_pruned.safetensors'
       IMAGE_SIZE: '1024x1024'
       IMAGE_STEPS: 20
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
@@ -278,8 +278,8 @@ services:
       - 'SYS_NICE'
     command:
       - '--api'
-      - '--ckpt-dir'
-      - '/mnt/models/Stable-diffusion'
+      - '--ckpt'
+      - '/mnt/models/Stable-diffusion/DreamShaper_8_pruned.safetensors'
       - '--listen'
       - '--use-ipex'
     depends_on:
