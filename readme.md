@@ -84,9 +84,9 @@ Credentials can be changed in the environment file, however the previous `manage
 
 Credentials can be changed in the environment file and are immediately available upon recreation of the `ai-frontend` service.
 
-| Username | Password                      |
-| -------- | ----------------------------- |
-| `admin`  | `${STACK_PORTAINER_PASSWORD}` |
+| Username                 | Password                      |
+| ------------------------ | ----------------------------- |
+| `admin@${STACK_DOMAIN}`  | `${STACK_PORTAINER_PASSWORD}` |
 
 ## Stack Execution
 
