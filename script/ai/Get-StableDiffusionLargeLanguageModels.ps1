@@ -163,11 +163,33 @@ else {
             Write-Host "INFO: Starting download of SD.Next model [${modelName}] from ${model}." `
                 -ForegroundColor DarkGray;
 
+            ## Create a new HTTP client handler to manage the HTTP request and response for very
+            ## large model files that may exceed the default buffer sizes. This allows us to stream
+            ## the download directly to disk without loading the entire file into memory.
+            $handler = [System.Net.Http.HttpClientHandler]::new();
+
             ## Initialize our new HTTP client.
-            $client = [System.Net.Http.HttpClient]::new()
+            $client = [System.Net.Http.HttpClient]::new($handler);
+
+            ## Give the client a reasonable timeout for downloading large model files.
+            ## 60 minutes should be sufficient  for even very large models on a reasonably
+            ## fast connection, but you can adjust this as needed.
+            $client.Timeout = [TimeSpan]::FromMinutes(60);
 
             ## Send a GET request to the SD.Next model URL and get the response stream.
             $response = $client.GetAsync($model, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult();
+
+            ## Ensure we got a successful response before we try to read the stream.
+            ## If we didn't, we'll write an error message to the console and skip to the next model in the list.
+            if (-not $response.IsSuccessStatusCode) {
+
+                ## Write a message to the console indicating that there was an error downloading the SD.Next model due to an unsuccessful HTTP response status code.
+                Write-Host "ERROR: Failed to download SD.Next model [${modelName}] from ${model}. HTTP response status code: $($response.StatusCode)" `
+                    -ForegroundColor DarkRed;
+
+                ## Skip to the next model in the list since we couldn't download this one.
+                continue;
+            }
 
             ## Localize the stream from the response.
             $responseStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
