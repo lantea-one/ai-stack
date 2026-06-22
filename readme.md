@@ -142,3 +142,5 @@ The commands below will tear the entire stack [or specific services] down then s
 [Portainer](https://github.com/portainer/portainer) `community-edition` - Clean and modern web interface for managing Docker infrastructure.
 
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) - Orchestration software [desktop edition] used to run all of this.
+
+[PowerShell Universal](https://github.com/PowerShell/PowerShell/releases) - Used to control the stack.  Containerized version used to download LLMs.
