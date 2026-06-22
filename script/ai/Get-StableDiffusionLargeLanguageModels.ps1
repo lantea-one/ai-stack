@@ -164,8 +164,7 @@ else {
                 -ForegroundColor DarkGray;
 
             ## Download the SD.Next model from the provided URL and save it to the specified path.
-            Invoke-WebRequest -ConnectionTimeoutSeconds 30 -OutFile "${modelPath}" `
-                -ProgressAction SilentlyContinue -Uri "${model}";
+            (New-Object System.Net.WebClient).DownloadFile($model, $modelPath);
 
             ## Write a message to the console indicating that the SD.Next model was downloaded successfully.
             Write-Host "DONE: Successfully downloaded SD.Next model [${modelName}] to [${modelPath}]." `

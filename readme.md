@@ -22,30 +22,30 @@ Ollama models can be found at [https://ollama.com/library](https://ollama.com/li
 
 Each of the following environment variables can be overridden to control the exact function of the stack.
 
-| Variable                              | Default                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
-| `STACK_DNS_IPV4_1`                    |  `9.9.9.11`                                                                           |
-| `STACK_DNS_IPV4_2`                    | `149.112.112.11`                                                                      |
-| `STACK_DNS_IPV6_1`                    | `2620:fe::11`                                                                         |
-| `STACK_DNS_IPV6_2`                    | `2620:fe::fe:11`                                                                      |
-| `STACK_IMAGE_STARTUP_TIMEOUT`         | `10m`                                                                                 |
-| `STACK_KEY`                           | `ai`                                                                                  |
-| `STACK_DOMAIN`                        | `${STACK_KEY}.local`                                                                  |
-| `STACK_NAME`                          | `${STACK_KEY}-stack`                                                                  |
-| `STACK_PORTAINER_USERNAME`            | `admin` *static*                                                                      |
-| `STACK_PORTAINER_PASSWORD`            | `ChangeMe123!!!$`                                                                     |
-| `STACK_RESTART_POLICY`                | `unless-stopped`                                                                      |
-| `STACK_SUBNET_IPV4`                   | `172.16.13`                                                                           |
-| `STACK_SUBNET_IPV6`                   | `fdd0:172:16:13`                                                                      |
-| `STACK_TIMEZONE`                      | `America/New_York`                                                                    |
-| `STACK_OLLAMA_DEFAULT_MODEL`          | `gemma3:4b`                                                                           |
-| `STACK_OLLAMA_MODEL_LIST`             | `gemma3:4b,qwen2.5-coder:7b,codegemma:2b`                                             |
-| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/DreamShaper/blob/main/DreamShaper_8_pruned.safetensors` |
-| `STACK_SDNEXT_MODEL_PATH`             | `/mnt/models/Stable-diffusion`                                                        |
-| `STACK_FRONTEND_WEBUI_ADMIN_EMAIL`    | `admin@${STACK_DOMAIN}`                                                               |
-| `STACK_FRONTEND_WEBUI_ADMIN_PASSWORD` | `$(openssl rand -base64 32 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`    |
-| `STACK_FRONTEND_WEBUI_ADMIN_NAME`     | `System Administrator`                                                                |
-| `STACK_FRONTEND_WEBUI_SECRET_KEY`     | `$(openssl rand -base64 64 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`    |
+| Variable                              | Default                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `STACK_DNS_IPV4_1`                    | `9.9.9.11`                                                                                                         |
+| `STACK_DNS_IPV4_2`                    | `149.112.112.11`                                                                                                   |
+| `STACK_DNS_IPV6_1`                    | `2620:fe::11`                                                                                                      |
+| `STACK_DNS_IPV6_2`                    | `2620:fe::fe:11`                                                                                                   |
+| `STACK_IMAGE_STARTUP_TIMEOUT`         | `10m`                                                                                                              |
+| `STACK_KEY`                           | `ai`                                                                                                               |
+| `STACK_DOMAIN`                        | `${STACK_KEY}.local`                                                                                               |
+| `STACK_NAME`                          | `${STACK_KEY}-stack`                                                                                               |
+| `STACK_PORTAINER_USERNAME`            | `admin` *static*                                                                                                   |
+| `STACK_PORTAINER_PASSWORD`            | `ChangeMe123!!!$`                                                                                                  |
+| `STACK_RESTART_POLICY`                | `unless-stopped`                                                                                                   |
+| `STACK_SUBNET_IPV4`                   | `172.16.13`                                                                                                        |
+| `STACK_SUBNET_IPV6`                   | `fdd0:172:16:13`                                                                                                   |
+| `STACK_TIMEZONE`                      | `America/New_York`                                                                                                 |
+| `STACK_OLLAMA_DEFAULT_MODEL`          | `gemma3:4b`                                                                                                        |
+| `STACK_OLLAMA_MODEL_LIST`             | `gemma3:4b,qwen2.5-coder:7b,codegemma:2b`                                                                          |
+| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning-SFW.safetensors`          |
+| `STACK_SDNEXT_MODEL_PATH`             | `/mnt/models/Stable-diffusion`                                                                                     |
+| `STACK_FRONTEND_WEBUI_ADMIN_EMAIL`    | `admin@${STACK_DOMAIN}`                                                                                            |
+| `STACK_FRONTEND_WEBUI_ADMIN_PASSWORD` | `$(openssl rand -base64 32 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`                                 |
+| `STACK_FRONTEND_WEBUI_ADMIN_NAME`     | `System Administrator`                                                                                             |
+| `STACK_FRONTEND_WEBUI_SECRET_KEY`     | `$(openssl rand -base64 64 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`                                 |
 
 ## Access
 
