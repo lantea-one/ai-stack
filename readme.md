@@ -129,6 +129,33 @@ The commands below will tear the entire stack [or specific services] down then s
 .\Invoke-StackComposer.ps1 -Pull -Recreate -Only @('management-portainer')
 ```
 
+### Script Help Block
+
+```pwsh
+Invoke-StackComposer.ps1
+    [[-ComposerFile] <string>]
+    [[-Domain] <string>]
+    [[-EnvironmentFile] <string>]
+    [[-Except] <string[]>]
+    [[-HostsFile] <string>]
+    [[-Only] <string[]>]
+    [[-PassthroughArguments] <string[]>]
+    [[-VariablePrefix] <string>]
+    [-Build]
+    [-Down]
+    [-DryRun]
+    [-Passthrough]
+    [-Plain]
+    [-Prune]
+    [-Pull]
+    [-Recreate]
+    [-Restart]
+    [-SkipWriteHostsFile]
+    [-Stop]
+    [-Up]
+    [<CommonParameters>]
+```
+
 ## Further Reading
 
 [Ollama](https://github.com/ollama/ollama) - Frontend to `llama.cpp`.  Used to download and interact with LLMs.
