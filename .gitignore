@@ -744,3 +744,4 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/composer,visualstudiocode,jetbrains,jetbrains+all,webstorm+all,rider,visualstudio,terraform,terragrunt
 *.env
+limiter.toml

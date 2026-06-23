@@ -1,6 +1,6 @@
 # AI Stack
 
-This is a simple stack that stands up a full-featured AI stack that can be run on a local machine using Docker.  It's tuned specifically for Intel ARC devices using IPEX.  That being said, each of the technologies involved in the stack can be relatively easily re-tuned for Cuda (nVidia) or ROCM (AMD).
+This is a simple stack that stands up a full-featured AI stack that can be run on a local machine using Docker.  It's tuned specifically for Intel ARC devices using IPEX.  That being said, each of the technologies involved in the stack can be relatively easily re-tuned for Cuda (nVidia), ROCM (AMD) or CPU.  If no compatible GPUs are found in the system [attached to the containers] then this stack should fall back to CPU generation.
 
 ## Models
 
@@ -12,37 +12,40 @@ Ollama models can be found at [https://ollama.com/library](https://ollama.com/li
 | ------------------------- | ------------------------------------------------------------------------------- |
 | `codegemma:2b`            | Standard, fast-response, code completion.                                       |
 | `gemma3:4b`               | Gemini-equivalent for general conversation, image generation and web searching. |
-| `qwen2.5-coder`           | Code conversation and complex code completion.                                  |
+| `qwen2.5-coder:7b`        | Code conversation and complex code completion.                                  |
 | `DreamShaperXL_Lightning` | Stable diffusion image generation.                                              |
 
 ## Environment Variables
 
 Each of the following environment variables can be overridden to control the exact function of the stack.
 
-| Variable                              | Default                                                                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `STACK_DNS_IPV4_1`                    | `9.9.9.11`                                                                                                         |
-| `STACK_DNS_IPV4_2`                    | `149.112.112.11`                                                                                                   |
-| `STACK_DNS_IPV6_1`                    | `2620:fe::11`                                                                                                      |
-| `STACK_DNS_IPV6_2`                    | `2620:fe::fe:11`                                                                                                   |
-| `STACK_IMAGE_STARTUP_TIMEOUT`         | `10m`                                                                                                              |
-| `STACK_KEY`                           | `ai`                                                                                                               |
-| `STACK_DOMAIN`                        | `${STACK_KEY}.local`                                                                                               |
-| `STACK_NAME`                          | `${STACK_KEY}-stack`                                                                                               |
-| `STACK_PORTAINER_USERNAME`            | `admin` *static*                                                                                                   |
-| `STACK_PORTAINER_PASSWORD`            | `ChangeMe123!!!$`                                                                                                  |
-| `STACK_RESTART_POLICY`                | `unless-stopped`                                                                                                   |
-| `STACK_SUBNET_IPV4`                   | `172.16.13`                                                                                                        |
-| `STACK_SUBNET_IPV6`                   | `fdd0:172:16:13`                                                                                                   |
-| `STACK_TIMEZONE`                      | `America/New_York`                                                                                                 |
-| `STACK_OLLAMA_DEFAULT_MODEL`          | `gemma3:4b`                                                                                                        |
-| `STACK_OLLAMA_MODEL_LIST`             | `gemma3:4b,qwen2.5-coder:7b,codegemma:2b`                                                                          |
-| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors`       |
-| `STACK_SDNEXT_MODEL_PATH`             | `/mnt/models/Stable-diffusion`                                                                                     |
-| `STACK_FRONTEND_WEBUI_ADMIN_EMAIL`    | `admin@${STACK_DOMAIN}`                                                                                            |
-| `STACK_FRONTEND_WEBUI_ADMIN_PASSWORD` | `$(openssl rand -base64 32 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`                                 |
-| `STACK_FRONTEND_WEBUI_ADMIN_NAME`     | `System Administrator`                                                                                             |
-| `STACK_FRONTEND_WEBUI_SECRET_KEY`     | `$(openssl rand -base64 64 \| tr -d '\n' \| tr -d '\r' \| tr -d ' ' \| tr -d '=')`                                 |
+| Variable                              | Default                                                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `STACK_DNS_IPV4_1`                    | `9.9.9.11`                                                                                                   |
+| `STACK_DNS_IPV4_2`                    | `149.112.112.11`                                                                                             |
+| `STACK_DNS_IPV6_1`                    | `2620:fe::11`                                                                                                |
+| `STACK_DNS_IPV6_2`                    | `2620:fe::fe:11`                                                                                             |
+| `STACK_IMAGE_STARTUP_TIMEOUT`         | `10m`                                                                                                        |
+| `STACK_KEY`                           | `ai`                                                                                                         |
+| `STACK_DOMAIN`                        | `${STACK_KEY}.local`                                                                                         |
+| `STACK_NAME`                          | `${STACK_KEY}-stack`                                                                                         |
+| `STACK_PORTAINER_USERNAME`            | `admin` *static*                                                                                             |
+| `STACK_PORTAINER_PASSWORD`            | `ChangeMe123!!!$`                                                                                            |
+| `STACK_PORTAINER_PORT_HTTP`           | `9000`                                                                                                       |
+| `STACK_PORTAINER_PORT_HTTPS`          | `9443`                                                                                                       |
+| `STACK_RESTART_POLICY`                | `unless-stopped`                                                                                             |
+| `STACK_SUBNET_IPV4`                   | `172.16.13`                                                                                                  |
+| `STACK_SUBNET_IPV6`                   | `fdd0:172:16:13`                                                                                             |
+| `STACK_TIMEZONE`                      | `America/New_York`                                                                                           |
+| `STACK_OLLAMA_DEFAULT_MODEL`          | `gemma3:4b`                                                                                                  |
+| `STACK_OLLAMA_MODEL_LIST`             | `gemma3:4b,qwen2.5-coder:7b,codegemma:2b`                                                                    |
+| `STACK_SDNEXT_MODEL_LIST`             | `https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors` |
+| `STACK_SDNEXT_MODEL_PATH`             | `/mnt/models/Stable-diffusion`                                                                               |
+| `STACK_FRONTEND_WEBUI_ADMIN_EMAIL`    | `admin@${STACK_DOMAIN}`                                                                                      |
+| `STACK_FRONTEND_WEBUI_ADMIN_PASSWORD` | `ChangeMe123!!!$`                                                                                            |
+| `STACK_FRONTEND_WEBUI_ADMIN_NAME`     | `System Administrator`                                                                                       |
+| `STACK_FRONTEND_PORT_HTTP`            | `8080`                                                                                                       |
+| `STACK_FRONTEND_WEBUI_SECRET_KEY`     | `SomeVeryLongSuperSecretAndRandomStringThatShouldBeChanged`                                                  |
 
 ## Access
 
@@ -54,27 +57,27 @@ The stack will automatically provision two web consoles.  One is Portainer which
 
 #### Portainer Hosts
 
-| Host                      | Hostname                                             | Port                   | URL                                                   |
-| ------------------------- | ---------------------------------------------------- | ---------------------- | ----------------------------------------------------- |
-| `${STACK_SUBNET_IPV4}.2`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN}` | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
-| `${STACK_SUBNET_IPV6}::2` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN}` | `9000/tcp`, `9443/tcp` | `http://localhost:9000/` or `https://localhost:9443/` |
+| Host                                      | Hostname                                                           | Port                                                                                | URL                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `${STACK_SUBNET_IPV4:-172.16.13}.2`       | `${STACK_NAME:-ai}-management-portainer.${STACK_DOMAIN:-ai.local}` | `${STACK_PORTAINER_PORT_HTTP:-9000}/tcp`, `${STACK_PORTAINER_PORT_HTTPS:-9443/tcp}` | `http://localhost:${STACK_PORTAINER_PORT_HTTP:-9000/`, `https://localhost:${STACK_PORTAINER_PORT_HTTPS:-9443/` |
+| `${STACK_SUBNET_IPV6:-fdd0:173:16:13}::2` | `${STACK_NAME:-ai}-management-portainer.${STACK_DOMAIN:-ai.local}` | `${STACK_PORTAINER_PORT_HTTP:-9000}/tcp`, `${STACK_PORTAINER_PORT_HTTPS:-9443/tcp}` | `http://localhost:${STACK_PORTAINER_PORT_HTTP:-9000/`, `https://localhost:${STACK_PORTAINER_PORT_HTTPS:-9443/` |
 
 #### Portainer Credentials
 
 Credentials can be changed in the environment file, however the previous `management-portainer-data` volume must be completely purged before recreating the `management-portainer` service.
 
-| Username | Password                                           |
-| -------- | -------------------------------------------------- |
-| `admin`  | `ChangeMe123!!!$` or `${STACK_PORTAINER_PASSWORD}` |
+| Username         | Password                                           |
+| ---------------- | -------------------------------------------------- |
+| `admin` *static* | `${STACK_PORTAINER_PASSWORD:-'ChangeMe123!!!$'}`   |
 
 ### OpenWebUI
 
 #### OpenWebUI Hosts
 
-| Host                      | Hostname                                             | Port       | URL                      |
-| ------------------------- | ---------------------------------------------------- | ---------- | ------------------------ |
-| `${STACK_SUBNET_IPV4}.4`  | `${STACK_NAME}-management-portainer.${STACK_DOMAIN}` | `8080/tcp` | `http://localhost:8080/` |
-| `${STACK_SUBNET_IPV6}::4` | `${STACK_NAME}-management-portainer.${STACK_DOMAIN}` | `8080/tcp` | `http://localhost:9000/` |
+| Host                                      | Hostname                                                           | Port                                    | URL                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------ | --------------------------------------- | ----------------------------------------------------- |
+| `${STACK_SUBNET_IPV4:-172.16.13}.4`       | `${STACK_NAME:-ai}-management-portainer.${STACK_DOMAIN:-ai.local}` | `${STACK_FRONTEND_PORT_HTTP:-8080}/tcp` | `http://localhost:${STACK_FRONTEND_PORT_HTTP:-8080}/` |
+| `${STACK_SUBNET_IPV6:-fdd0:172:16:13}::4` | `${STACK_NAME:-ai}-management-portainer.${STACK_DOMAIN:-ai.local}` | `${STACK_FRONTEND_PORT_HTTP:-8080}/tcp` | `http://localhost:${STACK_FRONTEND_PORT_HTTP:-8080}/` |
 
 #### OpenWebUI Credentials
 
@@ -82,7 +85,7 @@ Credentials can be changed in the environment file and are immediately available
 
 | Username                 | Password                                                      |
 | ------------------------ | ------------------------------------------------------------- |
-| `admin@${STACK_DOMAIN}`  | `ChangeMe123!!!$` or `${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD}` |
+| `admin@${STACK_DOMAIN}`  | `${STACK_FRONTEND_WEBUI_ADMIN_PASSWORD:-'ChangeMe123!!!$'}`   |
 
 ## Stack Execution
 
@@ -129,6 +132,7 @@ The commands below will tear the entire stack [or specific services] down then s
 
 ```pwsh
 Invoke-StackComposer.ps1
+    [-Debug]
     [[-ComposerFile] <string>]
     [[-Domain] <string>]
     [[-EnvironmentFile] <string>]

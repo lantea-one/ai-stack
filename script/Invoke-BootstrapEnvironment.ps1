@@ -24,6 +24,22 @@ param ([Parameter(Mandatory = $true)] [String] $EnvironmentFile);
 ## Define an array to keep track of the variables we've defined from the environment file to avoid duplicates.
 [String[]] $definedVariables = @();
 
+## If the environment file doesn't exist, but an example environment file does, we'll copy the example to the actual environment file.
+if (-not (Test-Path -ErrorAction SilentlyContinue -Path "${EnvironmentFile}") `
+        -and (Get-ChildItem -ErrorAction SilentlyContinue -Path "$(Join-Path -AdditionalChildPath @('*.env.example') `
+        -ChildPath '..' -Path "${PSScriptRoot}")").Count -gt 0) {
+
+    ## Grab the first example environment file that matches the pattern and is in the same directory as the script.
+    [String] $exampleEnvironmentFile = Get-ChildItem -File -Filter '*.env.example' -Path "${PSScriptRoot}" |
+        Select-Object -First 1 | ForEach-Object { $_.FullName };
+
+    ## Write a debug message indicating that we're copying the example environment file to the actual environment file.
+    Write-Debug "Environment file [${EnvironmentFile}] does not exist, but an example environment file [${exampleEnvironmentFile}] does. Copying the example to the actual environment file.";
+
+    ## Copy the example environment file to the actual environment file.
+    Copy-Item -Force -Destination "${EnvironmentFile}" -Path "${exampleEnvironmentFile}";
+}
+
 ## If the environment file exists, we'll need to read its variables into the current environment.
 if (Test-Path -ErrorAction SilentlyContinue -Path "${EnvironmentFile}") {
 
@@ -144,7 +160,8 @@ if ($definedVariables.Length -gt 0) {
     ## Create a console table to display the variables we've defined from the environment file.
     [String] $definedVariablesTable = $definedVariables | Sort-Object | ForEach-Object {
         [PSCustomObject] @{ 'Variable' = $_; 'Value' = "$(Get-Item -Path "Env:$($_)" -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty 'Value')".Trim(); }
+            Select-Object -ExpandProperty 'Value')".Trim();
+        }
     } | Format-Table -AutoSize | Out-String;
 
     #   ## Write out the variables that have been defined and their values.

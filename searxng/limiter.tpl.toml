@@ -1,0 +1,7 @@
+[botdetection.ip_lists]
+pass_ip = [
+    "::1",
+    "127.0.0.1",
+    "${STACK_SUBNET_IPV4:-172.16.13}.0/24",
+    "${STACK_SUBNET_IPV6:-fdd0:172:16:13}::/64"
+]

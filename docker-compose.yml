@@ -75,12 +75,12 @@ networks:
     ipam:
       driver: default
       config:
-        - gateway: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::1'
-          ip_range: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}:8000::/65'
-          subnet: '${STACK_SUBNET_IPV6:-fdd0:10:13:1}::/64'
-        - gateway: '${STACK_SUBNET_IPV4:-10.13.1}.1'
-          ip_range: '${STACK_SUBNET_IPV4:-10.13.1}.128/25'
-          subnet: '${STACK_SUBNET_IPV4:-10.13.1}.0/24'
+        - gateway: '${STACK_SUBNET_IPV6:-fdd0:172:16:13}::1'
+          ip_range: '${STACK_SUBNET_IPV6:-fdd0:172:16:13}:8000::/65'
+          subnet: '${STACK_SUBNET_IPV6:-fdd0:172:16:13}::/64'
+        - gateway: '${STACK_SUBNET_IPV4:-172.16.13}.1'
+          ip_range: '${STACK_SUBNET_IPV4:-172.16.13}.128/25'
+          subnet: '${STACK_SUBNET_IPV4:-172.16.13}.0/24'
 
 ## Define the secrets that will be used by our stack. These values are stored in Docker secrets and can be used by the
 ## services in our stack to securely access sensitive information, such as passwords or API keys. In this case, we
@@ -132,11 +132,11 @@ services:
     image: '${STACK_PORTAINER_IMAGE:-docker.io/portainer/portainer-ce:alpine}'
     networks:
       vlan:
-        ipv4_address: '${STACK_PORTAINER_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.2}'
-        ipv6_address: '${STACK_PORTAINER_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::2}'
+        ipv4_address: '${STACK_PORTAINER_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.2}'
+        ipv6_address: '${STACK_PORTAINER_IPV6:-${STACK_SUBNET_IPV6:-fdd0:172:16:13}::2}'
     ports:
-      - '9000:9000/tcp'
-      - '9443:9443/tcp'
+      - '${STACK_PORTAINER_PORT_HTTP:-9000}:9000/tcp'
+      - '${STACK_PORTAINER_PORT_HTTPS:-9443}:9443/tcp'
     secrets:
       - managements-portainer-password
     volumes:
@@ -165,16 +165,16 @@ services:
       - '/dev/dri:/dev/dri'
     environment:
       <<: *default-environment-ai-no-proxy
-      DEVICE: 'Arc'
-      OLLAMA_FLASH_ATTENTION: 1
+      DEVICE: '${GPU_INTEL_ARC_DEVICE:-Arc}'
+      OLLAMA_FLASH_ATTENTION: '${GPU_INTEL_ARC_OLLAMA_FLASH_ATTENTION:-1}'
       OLLAMA_HOST: '0.0.0.0'
       OLLAMA_INTEL_GPU: true
       OLLAMA_KEEP_ALIVE: '10m'
-      OLLAMA_MAX_LOADED_MODELS: 3
-      OLLAMA_NUM_CTX: 4096
-      OLLAMA_NUM_PARALLEL: 1
-      ONEAPI_DEVICE_SELECTOR: 'level_zero:0'
-      ZES_ENABLE_SYSMAN: 1
+      OLLAMA_MAX_LOADED_MODELS: '${GPU_INTEL_ARC_OLLAMA_MAX_LOADED_MODELS:-3}'
+      OLLAMA_NUM_CTX: '${GPU_INTEL_ARC_OLLAMA_NUM_CTX:-4096}'
+      OLLAMA_NUM_PARALLEL: '${GPU_INTEL_ARC_OLLAMA_NUM_PARALLEL:-1}'
+      ONEAPI_DEVICE_SELECTOR: "${GPU_INTEL_ARC_OLLAMA_ONEAPI_DEVICE_SELECTOR:-'level_zero:0'}"
+      ZES_ENABLE_SYSMAN: '${GPU_INTEL_ARC_OLLAMA_ZES_ENABLE_SYSMAN:-1}'
     group_add: *default-groups
     healthcheck:
       test: >
@@ -183,11 +183,11 @@ services:
       timeout: 30s
       retries: 3
       start_period: 3m
-    image: '${STACK_BACKEND_IMAGE:-docker.io/uberchuckie/ollama-intel-gpu:latest}'
+    image: '${GPU_INTEL_ARC_BACKEND_IMAGE:-docker.io/uberchuckie/ollama-intel-gpu:latest}'
     networks:
       vlan:
-        ipv4_address: '${STACK_AI_BACKEND_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.3}'
-        ipv6_address: '${STACK_AI_BACKEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::3}'
+        ipv4_address: '${STACK_AI_BACKEND_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.3}'
+        ipv6_address: '${STACK_AI_BACKEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:172:16:13}::3}'
     privileged: true
     volumes:
       - 'ai-backend-data:/root/.ollama'
@@ -213,14 +213,12 @@ services:
         condition: service_healthy
       ai-model-backend:
         condition: service_completed_successfully
-      ai-model-image:
-        condition: service_completed_successfully
       ai-web:
         condition: service_healthy
     environment:
       <<: *default-environment-ai-no-proxy
       AUTOMATIC1111_BASE_URL: 'http://ai-image:7860'
-      AUTOMATIC1111_CFG_SCALE: 2.0
+      AUTOMATIC1111_CFG_SCALE: '${GPU_INTEL_ARC_AUTOMATIC1111_CFG_SCALE:-2.0}'
       AUTOMATIC1111_SAMPLER: 'DPM++ SDE Karras'
       AUTOMATIC1111_SCHEDULER: 'Karras'
       DEFAULT_MODELS: '${STACK_OLLAMA_DEFAULT_MODEL:-${STACK_OLLAMA_MODEL_LIST:-gemma3:4b}}'
@@ -229,13 +227,13 @@ services:
       ENABLE_DIRECT_CONNECTIONS: True
       ENABLE_IMAGE_GENERATION: True
       ENABLE_OLLAMA_API: True
-      ENABLE_OPENAI_API: False
+      ENABLE_OPENAI_API: '${{GPU_INTEL_ARC_FRONTEND_ENABLE_OPENAI_API:-False}}'
       ENABLE_PERSISTENT_CONFIG: False
       ENABLE_RAG_WEB_SEARCH: True
       IMAGE_GENERATION_ENGINE: 'automatic1111'
-      IMAGE_GENERATION_MODEL: 'DreamShaperXL_Lightning-SFW.safetensors'
-      IMAGE_SIZE: '1024x1024'
-      IMAGE_STEPS: 4
+      IMAGE_GENERATION_MODEL: '${{GPU_INTEL_ARC_FRONTEND_IMAGE_MODEL:-DreamShaperXL_Lightning-SFW.safetensors}}'
+      IMAGE_SIZE: '${GPU_INTEL_ARC_FRONTEND_IMAGE_SIZE:-1024x1024}'
+      IMAGE_STEPS: '${GPU_INTEL_ARC_FRONTEND_IMAGE_STEPS:-4}'
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
       RAG_WEB_SEARCH_ENGINE: 'searxng'
       SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
@@ -254,10 +252,10 @@ services:
     image: '${STACK_FRONTEND_IMAGE:-ghcr.io/open-webui/open-webui:latest}'
     networks:
       vlan:
-        ipv4_address: '${STACK_FRONTEND_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.4}'
-        ipv6_address: '${STACK_FRONTEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::4}'
+        ipv4_address: '${STACK_FRONTEND_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.4}'
+        ipv6_address: '${STACK_FRONTEND_IPV6:-${STACK_SUBNET_IPV6:-fdd0:172:16:13}::4}'
     ports:
-      - '8080:8080/tcp'
+      - '${STACK_FRONTEND_PORT_HTTP:-8080}:8080/tcp'
     volumes:
       - 'ai-frontend-data:/app/backend/data'
 
@@ -276,12 +274,7 @@ services:
     <<: *default-settings
     cap_add:
       - 'SYS_NICE'
-    command:
-      - '--api'
-      - '--ckpt'
-      - '/mnt/models/Stable-diffusion/DreamShaperXL_Lightning-SFW.safetensors'
-      - '--listen'
-      - '--use-ipex'
+    command: '${{ SDNEXT_ARGUMENT_LIST }}'
     depends_on:
       ai-model-image:
         condition: service_completed_successfully
@@ -289,6 +282,9 @@ services:
       - '/dev/dri:/dev/dri'
     environment:
       <<: *default-environment-ai-no-proxy
+      ARGUMENT_LIST: |
+        ${{ SDNEXT_ARGUMENT_LIST:-'--api --listen' }}
+        ${{ GPU_INTEL_ARC_SDNEXT_ARGUMENT_LIST:-'--use-ipex' }}
       IPEX_FORCE_ATTENTION_SLICE: 1
       IPEXRUN: true
     healthcheck:
@@ -299,11 +295,11 @@ services:
       retries: 3
       start_period: '${STACK_IMAGE_STARTUP_TIMEOUT:-10m}'
     group_add: *default-groups
-    image: '${STACK_IMAGE_IMAGE:-docker.io/liutyi/sdnext-ipex:master}'
+    image: '${GPU_INTEL_ARC_IMAGE_IMAGE:-docker.io/liutyi/sdnext-ipex:master}'
     networks:
       vlan:
-        ipv4_address: '${STACK_IMAGE_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.5}'
-        ipv6_address: '${STACK_IMAGE_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::5}'
+        ipv4_address: '${STACK_IMAGE_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.5}'
+        ipv6_address: '${STACK_IMAGE_IPV6:-${STACK_SUBNET_IPV6:-fdd0:172:16:13}::5}'
     volumes:
       - 'ai-image-app:/app'
       - 'ai-image-hf:/root/.cache/huggingface'
@@ -361,7 +357,7 @@ services:
       SDNEXT_FORCE_DOWNLOAD: '${STACK_SDNEXT_FORCE_DOWNLOAD:-true}'
       SDNEXT_HOST: 'http://ai-image:7860'
       SDNEXT_MODEL_LIST: >-
-        ${STACK_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"}
+        ${GPU_INTEL_ARC_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"}
       SDNEXT_MODEL_PATH: '${STACK_SDNEXT_MODEL_PATH:-/mnt/models/Stable-diffusion}'
     image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
     networks:
@@ -383,6 +379,9 @@ services:
   ## function properly.
   ai-web:
     <<: *default-settings
+    depends_on:
+      ai-web-config:
+        condition: service_completed_successfully
     environment:
       <<: *default-environment-ai-no-proxy
       SEARXNG_BASE_URL: 'http://ai-web:8080'
@@ -398,14 +397,41 @@ services:
       timeout: 5s
       retries: 3
       start_period: 3m
-    image: 'docker.io/searxng/searxng:latest'
+    image: '${STACK_WEB_IMAGE:-docker.io/searxng/searxng:latest}'
     networks:
       vlan:
-        ipv4_address: '${STACK_WEB_IPV4:-${STACK_SUBNET_IPV4:-10.13.1}.6}'
-        ipv6_address: '${STACK_WEB_IPV6:-${STACK_SUBNET_IPV6:-fdd0:10:13:1}::6}'
+        ipv4_address: '${STACK_WEB_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.6}'
+        ipv6_address: '${STACK_WEB_IPV6:-${STACK_SUBNET_IPV6:-fdd0:172:16:13}::6}'
     volumes:
       - 'ai-web-data:/etc/searxng'
-      - './searxng/limiter.toml:/etc/searxng/limiter.toml:ro'
+
+  ## This service is a one-shot whose purpose is to generate the limiter.toml configuration file for SearXNG based on
+  ## the limiter.tpl.toml template file. It reads the template file, evaluates any environment variables in it, and
+  ## writes the resulting configuration to the limiter.toml file, which is then used by the ai-web service. The
+  ## ai-web-config service is important for ensuring that the SearXNG configuration is properly generated and available
+  ## for use by the ai-web service, which is essential for the proper functioning of the search capabilities of our
+  ## stack. The image for the ai-web-config service is specified as a Bash image, and we set various environment
+  ## variables to configure its behavior, such as the paths for the template and output files and the stack's subnet
+  ## settings. We also mount volumes to allow the service to access the template file and to write the generated
+  ## configuration file to the appropriate location.
+  ai-web-config:
+    <<: *default-settings
+    command: "bash '/usr/bin/generate-limiter-toml.bash';"
+    environment:
+      <<: *default-environment-ai-no-proxy
+      LIMITER_TOML: '/etc/searxng/limiter.toml'
+      LIMITER_TOML_TEMPLATE: '/tmp/searxng/limiter.tpl.toml'
+      LIMITER_TOML_TEMPORARY_FILE: '/tmp/searxng/limiter.toml.tmp'
+      STACK_SUBNET_IPV4: '${STACK_SUBNET_IPV4:-172.16.13}'
+      STACK_SUBNET_IPV6: '${STACK_SUBNET_IPV6:-fdd0:172:16:13}'
+    image: '${STACK_WEB_CONFIG_IMAGE:-docker.io/bash:latest}'
+    networks:
+      - 'vlan'
+    restart: 'no'
+    volumes:
+      - 'ai-web-data:/etc/searxng'
+      - './script/searxng/generate-limiter-toml.bash:/usr/bin/generate-limiter-toml.bash:ro'
+      - './searxng:/tmp/searxng:ro'
 
 ## Here we define our volumes.  We do so instead of mapping paths directly so we can persist data across container
 ## restarts and to allow for easier management of the data used by our services. Each volume is given a name that
