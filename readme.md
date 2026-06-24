@@ -156,7 +156,7 @@ Invoke-StackComposer.ps1
     [-UseCuda]
     [-UseIris]
     [-UseRocm]
-    [<CommonParameters>]
+    [<ParametersForPassthrough>]
 ```
 
 ## Further Reading
