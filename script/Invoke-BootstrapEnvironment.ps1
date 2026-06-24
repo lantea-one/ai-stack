@@ -134,13 +134,14 @@ if (Test-Path -ErrorAction SilentlyContinue -Path "${EnvironmentFile}") {
         }
 
         ## Unescape any bash-style escaped characters in the value (e.g., \n, \t, etc.).
-        $value = "$(Get-EnvironmentSubstitutions -Value:$value)" -replace '\\([nrt])', {
-            switch ($matches[1]) {
-                'n' { "`n" }
-                'r' { "`r" }
-                't' { "`t" }
-                default { $matches[0] } ## If it's an unrecognized escape sequence, leave it as-is.
-            }
+        if ("${value}".Trim() -ne '') {
+            $value = "$(Get-EnvironmentSubstitutions -Value:$value)" -replace '\\([nrt])', {
+                switch ($matches[1]) {
+                    'n' { "`n" }
+                    'r' { "`r" }
+                    't' { "`t" }
+                    default { $matches[0] } ## If it's an unrecognized escape sequence, leave it as-is.
+                } };
         };
 
         ## Write a debug message indicating the final value of the environment variable after processing.
@@ -158,11 +159,12 @@ if (Test-Path -ErrorAction SilentlyContinue -Path "${EnvironmentFile}") {
 if ($definedVariables.Length -gt 0) {
 
     ## Create a console table to display the variables we've defined from the environment file.
-    [String] $definedVariablesTable = $definedVariables | Sort-Object | ForEach-Object {
-        [PSCustomObject] @{ 'Variable' = $_; 'Value' = "$(Get-Item -Path "Env:$($_)" -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty 'Value')".Trim();
-        }
-    } | Format-Table -AutoSize | Out-String;
+    [String] $definedVariablesTable = $definedVariables |
+        Where-Object { -not $_.ToLower().StartsWith('gpu_'); } | Sort-Object | ForEach-Object {
+            [PSCustomObject] @{ 'Variable' = $_; 'Value' = "$(Get-Item -Path "Env:$($_)" -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty 'Value')".Trim();
+            }
+        } | Format-Table -AutoSize | Out-String;
 
     #   ## Write out the variables that have been defined and their values.
     Write-Host "INFO: Defined the following variables from the environment file [${EnvironmentFile}]:" -ForegroundColor DarkGray;

@@ -153,6 +153,9 @@ Invoke-StackComposer.ps1
     [-SkipWriteHostsFile]
     [-Stop]
     [-Up]
+    [-UseCuda]
+    [-UseIris]
+    [-UseRocm]
     [<CommonParameters>]
 ```
 

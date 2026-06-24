@@ -1,0 +1,25 @@
+services:
+  ai-backend:
+    ## We'll want to add the nVidia GPU framework to the deploy so the discrete GPU can be properly utilized by the AI
+    ##frontend when running on a system with an nVidia GPU. The environment variables will be set to allow users to
+    ## easily configure the image generation settings and enable the OpenAI API if desired.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - 'gpu'
+  ai-image:
+    ## We'll want to add the nVidia GPU framework to the deploy so the discrete GPU can be properly utilized by the AI
+    ##frontend when running on a system with an nVidia GPU. The environment variables will be set to allow users to
+    ## easily configure the image generation settings and enable the OpenAI API if desired.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - 'gpu'

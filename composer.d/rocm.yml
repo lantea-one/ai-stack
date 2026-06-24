@@ -1,0 +1,7 @@
+services:
+  ai-backend:
+    devices:
+      - '/dev/dri:/dev/dri'
+  ai-image:
+    devices:
+      - '/dev/dri:/dev/dri'

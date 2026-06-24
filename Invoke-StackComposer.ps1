@@ -68,6 +68,15 @@
 .PARAMETER Up
     A switch parameter to indicate whether to bring up the stack.
 
+.PARAMETER UseCuda
+    A switch parameter to indicate whether to use nVidia CUDA for the stack.
+
+.PARAMETER UseIris
+    A switch parameter to indicate whether to use Intel Iris for the stack.
+
+.PARAMETER UseRocm
+    A switch parameter to indicate whether to use AMD ROCm for the stack.
+
 .PARAMETER VariablePrefix
     A string parameter to specify the variable prefix for the stack composer, which is used to define
     the environment variables for the stack.
@@ -114,7 +123,7 @@ param (
     ## By default, we'll use '/etc/hosts'.
     [Parameter(Mandatory = $false)]
     [String] $HostsFile =
-        "$(if ($IsWindows) { "${env:SystemRoot}\System32\drivers\etc\hosts" } else { '/etc/hosts' })",
+    "$(if ($IsWindows) { "${env:SystemRoot}\System32\drivers\etc\hosts" } else { '/etc/hosts' })",
 
     ## We'll need a parameter to specify the services we want to target for our stack operations (e.g., build, pull, up, down, etc.).
     [Parameter(Mandatory = $false)]
@@ -161,6 +170,18 @@ param (
     ## We'll need a switch parameter to indicate whether we should bring the stack up or not.
     [Parameter(Mandatory = $false)]
     [Switch] $Up = $false,
+
+    ## We'll need a switch parameter to indicate whether we should use nVidia CUDA or not.
+    [Parameter(Mandatory = $false)]
+    [Switch] $UseCuda = $false,
+
+    ## We'll need a switch parameter to indicate whether we should use Intel Iris or not.
+    [Parameter(Mandatory = $false)]
+    [Switch] $UseIris = $false,
+
+    ## We'll need a switch parameter to indicate whether we should use AMD ROCm or not.
+    [Parameter(Mandatory = $false)]
+    [Switch] $UseRocm = $false,
 
     ## We'll need a parameter to specify the variable prefix for the stack composer, which will be used to
     ## define the environment variables for the stack. By default, we'll use 'ai'.
@@ -240,16 +261,278 @@ function ConvertFrom-TimeString {
     }
 }
 
+## Define a function to return the index of the desired GPU.
+function Get-GPUIndex {
+    <#
+    .SYNOPSIS
+        Returns the index of the desired GPU based on the specified GPU type (nVidia CUDA, Intel Iris, or AMD ROCm).
+
+    .DESCRIPTION
+        This function queries the system for available GPU devices and returns the index of the first device that matches
+        the specified GPU type. It supports nVidia CUDA, Intel Iris, and AMD ROCm GPUs. If no matching device is found,
+        it defaults to returning index 0.
+
+    .PARAMETER UseCuda
+        A switch parameter to indicate whether to use nVidia CUDA for the stack.
+
+    .PARAMETER UseIris
+        A switch parameter to indicate whether to use Intel Iris for the stack.
+
+    .PARAMETER UseRocm
+        A switch parameter to indicate whether to use AMD ROCm for the stack.
+
+    .OUTPUTS
+        Returns the index of the desired GPU as an integer. If no matching GPU is found, it returns 0.
+    #>
+    param ([Parameter(Mandatory = $false)] [Switch] $UseCuda = $false,
+        [Parameter(Mandatory = $false)] [Switch] $UseIris = $false,
+        [Parameter(Mandatory = $false)] [Switch] $UseRocm = $false);
+
+    ## Localize the query string based on the GPU type we're using (nVidia CUDA, Intel Iris, or AMD ROCm).
+    [String] $query = if ($UseCuda.ToBool()) { 'NVIDIA' }
+    elseif ($UseIris.ToBool()) { 'Intel.*Iris' }
+    elseif ($UseRocm.ToBool()) { 'AMD' }
+    else { 'Intel.*Arc' };
+
+    ## Check for a Windows operating system then query for devices.
+    if ($IsWindows) {
+
+        ## Localize the video controller instances from the Win32_VideoController class, which will be used to determine the GPU index.
+        $devices = (Get-CimInstance Win32_VideoController);
+
+        ## Find the first index matching the query string.
+        $index = $devices | Where-Object { $_.Name -match "${query}" } | Select-Object -First 1;
+
+        ## If we have an index, return it.
+        if ($index) { return [array]::IndexOf($devices, $index); }
+    }
+
+    ## Check for a macOS operating system then query for devices.
+    elseif ($IsMacOS) {
+
+        ## Localize the display devices from the system_profiler command, which will be used to determine the GPU index.
+        [String[]] $devices = (system_profiler SPDisplaysDataType | Select-String 'Chipset Model');
+
+        ## Find the first index matching the query string.
+        $index = $devices | Where-Object { $_ -match "${query}" } | Select-Object -First 1;
+
+        ## If we have an index, return it.
+        if ($index) { return [array]::IndexOf($devices, $index); }
+    }
+
+    ## Otherwise, we default to Linux.
+    else {
+
+        ## Localize the display devices from the lspci command, which will be used to determine the GPU index.
+        [String[]] $devices = (lspci | Select-String 'VGA|3D|Display');
+
+        # Find the first index matching the query string.
+        $index = $devices | Where-Object { $_ -match "${query}" } | Select-Object -First 1;
+
+        ## If we have an index, return it.
+        if ($index) { return [array]::IndexOf($devices, $index); }
+    }
+
+    ## If we get here, return 0 for the default GPU.
+    return 0;
+}
+
+## Define a function to determine the GPU-specific environment variables.
+function Set-GPUEnvironmentVariables {
+    <##
+    .SYNOPSIS
+        Sets GPU-specific environment variables based on the selected GPU type (nVidia CUDA, Intel Iris, or AMD ROCm).
+
+    .DESCRIPTION
+        This function sets environment variables that are specific to the selected GPU type. It checks for the
+        presence of the GPU type switches (UseCuda, UseIris, UseRocm) and sets the corresponding environment
+        variables accordingly. If no GPU type is specified, it defaults to Intel ARC.
+
+    .PARAMETER UseCuda
+        A switch parameter to indicate whether to use nVidia CUDA for the stack.
+
+    .PARAMETER UseIris
+        A switch parameter to indicate whether to use Intel Iris for the stack.
+
+    .PARAMETER UseRocm
+        A switch parameter to indicate whether to use AMD ROCm for the stack.
+    #>
+    param ([Parameter(Mandatory = $false)] [Switch] $UseCuda = $false,
+        [Parameter(Mandatory = $false)] [Switch] $UseIris = $false,
+        [Parameter(Mandatory = $false)] [Switch] $UseRocm = $false);
+
+
+    ## Localize the environment variable for the SD.Next argument list.
+    [String[]] $sdnextArgumentList = if ("${env:STACK_SDNEXT_ARGUMENT_LIST}".Trim() -eq '') { @('--api', '--listen'); }
+
+    ## If we have a space in the argument list, we'll split it into an array of arguments.
+    elseif ("${env:STACK_SDNEXT_ARGUMENT_LIST}".Contains(' ')) {
+        "${env:STACK_SDNEXT_ARGUMENT_LIST}".Trim().Split(' ') |
+            Where-Object { "${_}".Trim() -ne '' } |
+                ForEach-Object { "${_}".Trim() } |
+                    Sort-Object -Unique;
+    }
+
+    ## Otherwise, we'll assume it's a singular argument and create an array from it.
+    else { @("${env:STACK_SDNEXT_ARGUMENT_LIST}".Trim()); };
+
+    ## Define the list of environment variables we'll need to
+    ## translate for the GPU type we're using (nVidia CUDA, Intel Iris, or AMD ROCm).
+    [String[]] $environmentVariables = @(
+        'GPU_AUTOMATIC1111_CFG_SCALE',
+        'GPU_BACKEND_IMAGE',
+        'GPU_DEVICE',
+        'GPU_CUDA_FORCE_ATTENTION_SLICE',
+        'GPU_CUDA_VISIBLE_DEVICES',
+        'GPU_FRONTEND_IMAGE_MODEL',
+        'GPU_FRONTEND_IMAGE_SIZE',
+        'GPU_FRONTEND_IMAGE_STEPS',
+        'GPU_IMAGE_IMAGE',
+        'GPU_OLLAMA_FLASH_ATTENTION',
+        'GPU_OLLAMA_MAX_LOADED_MODELS',
+        'GPU_OLLAMA_NUM_CTX',
+        'GPU_OLLAMA_NUM_PARALLEL',
+        'GPU_OLLAMA_ONEAPI_DEVICE_SELECTOR',
+        'GPU_OLLAMA_ZES_ENABLE_SYSMAN',
+        'GPU_SDNEXT_ARGUMENT_LIST',
+        'GPU_SDNEXT_MODEL_LIST'
+    );
+
+    ## Localize the environment variable key based on the GPU type we're using (nVidia CUDA, Intel Iris, or AMD ROCm).
+    [String] $environmentKey = if ($UseCuda.ToBool()) {
+        'GPU_NVIDIA';
+    }
+    elseif ($UseIris.ToBool()) {
+        'GPU_INTEL_IRIS';
+    }
+    elseif ($UseRocm.ToBool()) {
+        'GPU_AMD';
+    }
+    else {
+        'GPU_INTEL_ARC';
+    };
+
+    ## Iterate through the list of environment variables and set them for nVidia
+    ## CUDA, using the values from the environment or the defaults if not set.
+    $environmentVariables | Where-Object { "${_}".Trim() -ne '' } | Sort-Object -Unique | ForEach-Object {
+
+        ## Localize the current environment variable name for processing.
+        [String] $variableName = ($environmentKey.ToUpper().Trim('_', ' ') + '_' + $_.Substring(4, $_.Length - 4).ToUpper().Trim('_', ' '));
+
+        ## Localize the variable value from the generated variable name.
+        [String] $variableValue = (Get-Item -ErrorAction Stop -Path "Env:${variableName}" |
+                Select-Object -ExpandProperty 'Value').Trim();
+
+            ## Set the base GPU variable to the value of the targeted GPU
+            ## type variable, which will be used by the stack composer.
+            Set-Item -Force -Path "Env:${_}" -Value "${variableValue}";
+        }
+
+        ## Check for additional SD.Next arguments.
+        if ("${env:GPU_SDNEXT_ARGUMENT_LIST}".Trim() -ne '') {
+
+            ## Append the additional SD.Next arguments to the existing argument list.
+            $sdnextArgumentList += if ("${env:GPU_SDNEXT_ARGUMENT_LIST}".Contains(' ')) {
+                "${env:GPU_SDNEXT_ARGUMENT_LIST}".Trim().Split(' ') |
+                    Where-Object { "${_}".Trim() -ne '' } |
+                        ForEach-Object { "${_}".Trim() }
+        }
+        else { @("${env:GPU_SDNEXT_ARGUMENT_LIST}".Trim()); };
+
+        ## Ensure the SD.Next argument list is unique and sorted.
+        $sdnextArgumentList = $sdnextArgumentList | Sort-Object -Unique;
+    }
+
+    ## Localize the SD.Next model list from the environment variable, which will be used by the stack composer.
+    [String[]] $sdnextModelList = if ("${env:STACK_SDNEXT_MODEL_LIST}".Trim() -eq '') {
+        @();
+    }
+    elseif ("${env:STACK_SDNEXT_MODEL_LIST}".Contains(',')) {
+        "${env:STACK_SDNEXT_MODEL_LIST}".Trim().Split(',') | Where-Object { "${_}".Trim() -ne '' } |
+            ForEach-Object { "${_}".Trim() }
+    }
+    else {
+        @("${env:STACK_SDNEXT_MODEL_LIST}".Trim());
+    };
+
+    ## Check for an iGPU and remove any default SD.Next models.
+    if ($UseIris.ToBool()) { $sdnextModelList = @(); }
+
+    ## Check for GPU-specific SD.Next models and append them to the existing model list.
+    if ("${env:GPU_SDNEXT_MODEL_LIST}".Trim() -ne '') {
+
+        ## Append the GPU-specific SD.Next models to the existing model list.
+        $sdnextModelList += if ("${env:GPU_SDNEXT_MODEL_LIST}".Contains(',')) {
+            "${env:GPU_SDNEXT_MODEL_LIST}".Trim().Split(',') | Where-Object { "${_}".Trim() -ne '' } | ForEach-Object { "${_}".Trim() }
+        }
+        else {
+            @("${env:GPU_SDNEXT_MODEL_LIST}".Trim());
+        };
+
+        ## Ensure the SD.Next model list is unique and sorted.
+        $sdnextModelList = $sdnextModelList | Sort-Object -Unique;
+    }
+
+    ## Iterate the the model list [which are URLs].
+    $sdnextModelList | Where-Object { "${_}".Trim() -ne '' } | Sort-Object -Unique |
+        ForEach-Object { [uri]$_.Trim(); } | ForEach-Object {
+
+            ## Localize the filename of the model from the URL, which will
+            ## be used to update the SDNEXT_ARGUMENT_LIST environment variable.
+            [String] $modelFilename = [System.IO.Path]::GetFileName($_.AbsolutePath);
+
+            ## Update the SD.Next argument list with a checkpoint for the model, which will be used by the stack composer.
+            $sdnextArgumentList += "--ckpt=$(Join-Path -ChildPath "${modelFilename}" -Path "${env:STACK_SDNEXT_MODEL_PATH}")";
+        };
+
+    ## Set the updated SD.Next model list into the environment.
+    Set-Item -Force -Path 'Env:STACK_SDNEXT_MODEL_LIST' -Value "$($sdnextModelList -join ',')";
+
+    ## Set the updated SD.Next argument list into the environment.
+    Set-Item -Force -Path 'Env:STACK_SDNEXT_ARGUMENT_LIST' -Value "$($sdnextArgumentList -join ' ')";
+
+    ## Set the GPU index into the environment, which will be used by the stack composer.
+    Set-Item -Force -Path 'Env:GPU_INDEX' -Value "$(Get-GPUIndex -UseCuda:$UseCuda -UseIris:$UseIris -UseRocm:$UseRocm)";
+
+    ## Check for nVidia CUDA and set the GPU_CUDA_VISIBLE_DEVICES environment variable if applicable.
+    if ($UseCuda.ToBool()) { Set-Item -Force -Path 'Env:GPU_CUDA_VISIBLE_DEVICES' -Value "${env:GPU_INDEX}"; }
+
+    ## Check for Intel Arc or Intel Iris and set the GPU_ONEAPI_DEVICE_SELECTOR environment variable if applicable.
+    if ($UseIris.ToBool() -or (-not $UseCuda.ToBool() -and -not $UseRocm.ToBool())) {
+        Set-Item -Force -Path 'Env:GPU_ONEAPI_DEVICE_SELECTOR' -Value "level_zero:${env:GPU_INDEX}";
+    }
+
+    ## Create a console table to display the variables we've defined from the environment file.
+    [String] $definedVariablesTable = ($environmentVariables + @(
+            'GPU_INDEX', 'STACK_SDNEXT_ARGUMENT_LIST', 'STACK_SDNEXT_MODEL_LIST'
+        )) | Where-Object { $_.ToLower() -ne 'gpu_sdnext_argument_list' -and $_.ToLower() -ne 'gpu_sdnext_model_list' } |
+        Sort-Object | ForEach-Object {
+            [PSCustomObject] @{ 'Variable' = $_; 'Value' = "$(Get-Item -Path "Env:$($_)" -ErrorAction SilentlyContinue |
+                    Select-Object -ExpandProperty 'Value')".Trim();
+            }
+        } | Format-Table -AutoSize | Out-String;
+
+    #   ## Write out the variables that have been defined and their values.
+    Write-Host 'INFO: Defined the following GPU variables from the environment:' -ForegroundColor DarkGray;
+    Write-Host "${definedVariablesTable}" -ForegroundColor DarkGray;
+}
+
 ## We'll need our function for parsing the docker-compose.yml file and returning the stack name and service map.
 . "${PSScriptRoot}/script/ConvertFrom-DockerCompose.ps1";
 
 ## Bootstrap the environment file into the current build time environment.
 & "${PSScriptRoot}/script/Invoke-BootstrapEnvironment.ps1" -EnvironmentFile:$EnvironmentFile;
 
+## Set the GPU-specific environment variables based on the selected GPU type (nVidia CUDA, Intel Iris, or AMD ROCm).
+Set-GPUEnvironmentVariables -UseCuda:$UseCuda -UseIris:$UseIris -UseRocm:$UseRocm;
+
 ## If our variable prefix is null or empty, pull it from the environment or use the default value of 'stack'.
 if ("${VariablePrefix}".Trim('_', ' ') -eq '') {
     $VariablePrefix = if ("$([System.Environment]::GetEnvironmentVariable('STACK_KEY'))".Trim() -ne '') {
-        [System.Environment]::GetEnvironmentVariable('STACK_KEY'); } else { 'stack'; }; }
+        [System.Environment]::GetEnvironmentVariable('STACK_KEY');
+    }
+    else { 'stack'; };
+}
 
 ## Sanitize the variable prefix to ensure it is a valid environment variable name.
 [String] $VariablePrefix = $VariablePrefix.Trim().ToUpper().TrimEnd('-', '_').Trim();
@@ -258,9 +541,12 @@ if ("${VariablePrefix}".Trim('_', ' ') -eq '') {
 if ("${Domain}".Trim('.', ' ') -eq '') {
     $Domain = if ("$([System.Environment]::GetEnvironmentVariable("${VariablePrefix}_DOMAIN"))".Trim() -ne '') {
         [System.Environment]::GetEnvironmentVariable("${VariablePrefix}_DOMAIN");
-    } elseif ("$([System.Environment]::GetEnvironmentVariable("${VariablePrefix}_STACK_DOMAIN"))".Trim() -ne '') {
+    }
+    elseif ("$([System.Environment]::GetEnvironmentVariable("${VariablePrefix}_STACK_DOMAIN"))".Trim() -ne '') {
         [System.Environment]::GetEnvironmentVariable("${VariablePrefix}_STACK_DOMAIN");
-    } else { "$($VariablePrefix.ToLower()).local"; }; }
+    }
+    else { "$($VariablePrefix.ToLower()).local"; };
+}
 
 ## Localize the command to run for the stack operations, which will be 'docker compose' with an optional '--dry-run'
 ## flag if the DryRun switch is set. This will allow us to easily use this command variable throughout the script for
@@ -274,15 +560,31 @@ if ($DryRun.ToBool()) {
     $command += '--dry-run';
 
     ## Write a message to the console indicating that we're in dry-run mode and no changes will be made.
-    Write-Host "NOTICE: Dry-run mode is enabled. No changes will be made to the stack or the hosts file." -ForegroundColor DarkYellow;
+    Write-Host 'NOTICE: Dry-run mode is enabled. No changes will be made to the stack or the hosts file.' -ForegroundColor DarkYellow;
     Write-Host '';
 }
 
 ## Add our composer file to the command variable, which will be used for all stack operations.
 $command += @('--file', "${ComposerFile}");
 
+## Localize our supplemental override file path.
+[String] $overridePath = "$(Join-Path -ChildPath 'composer.d' -Path "${PSScriptRoot}" -Resolve)";
+
+## If we're using nVidia CUDA then we'll need to include the supplemental override file.
+if ($UseCuda.ToBool()) { $override = "$(Join-Path -ChildPath 'cuda.yml' -Path "${overridePath}" -Resolve)"; }
+
+## If we're using AMD ROCm then we'll need to include the supplemental override file.
+elseif ($UseRocm.ToBool()) { $override = "$(Join-Path -ChildPath 'rocm.yml' -Path "${overridePath}" -Resolve)"; }
+
+## Otherwise we'll default to using the Intel supplemental override file.
+else { $override = "$(Join-Path -ChildPath 'intel.yml' -Path "${overridePath}" -Resolve)"; }
+
+## Add the override file to the command variable, which will be used for all stack operations.
+$command += @('--file', "${override}");
+
 ## Define the map of services to their IPv4 and IPv6 addresses for the stack.
-[HashTable] $composer = ConvertFrom-DockerCompose -ComposerFile:$ComposerFile -VariablePrefix:$VariablePrefix;
+[HashTable] $composer = $ComposerFile |
+    ConvertFrom-DockerCompose -OverrideFile:$override -VariablePrefix:$VariablePrefix;
 
 ## Check the service map for any services.
 if ($composer.services.Keys.Count -gt 0) {
@@ -290,10 +592,10 @@ if ($composer.services.Keys.Count -gt 0) {
     ## Create a console table to display the services and their IP addresses.
     [String] $servicesTable = $composer.services.GetEnumerator() | ForEach-Object {
         [PSCustomObject] @{
-            'Service' = $_.Key.Replace("$($composer.stackName)-", '');
+            'Service'  = $_.Key.Replace("$($composer.stackName)-", '');
             'Hostname' = $_.Key + '.' + $Domain.Trim('.', ' ');
-            'IPv4' = $_.Value.IPv4;
-            'IPv6' = $_.Value.IPv6;
+            'IPv4'     = $_.Value.IPv4;
+            'IPv6'     = $_.Value.IPv6;
         }
     } | Format-Table -AutoSize | Out-String;
 

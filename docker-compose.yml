@@ -165,16 +165,18 @@ services:
       - '/dev/dri:/dev/dri'
     environment:
       <<: *default-environment-ai-no-proxy
-      DEVICE: '${GPU_INTEL_ARC_DEVICE:-Arc}'
-      OLLAMA_FLASH_ATTENTION: '${GPU_INTEL_ARC_OLLAMA_FLASH_ATTENTION:-1}'
+      CUDA_FORCE_ATTENTION_SLICE: '${GPU_CUDA_FORCE_ATTENTION_SLICE:-0}'
+      CUDA_VISIBLE_DEVICES: '${GPU_CUDA_VISIBLE_DEVICES}'
+      DEVICE: '${GPU_DEVICE:-Arc}'
+      OLLAMA_FLASH_ATTENTION: '${GPU_OLLAMA_FLASH_ATTENTION:-1}'
       OLLAMA_HOST: '0.0.0.0'
       OLLAMA_INTEL_GPU: true
       OLLAMA_KEEP_ALIVE: '10m'
-      OLLAMA_MAX_LOADED_MODELS: '${GPU_INTEL_ARC_OLLAMA_MAX_LOADED_MODELS:-3}'
-      OLLAMA_NUM_CTX: '${GPU_INTEL_ARC_OLLAMA_NUM_CTX:-4096}'
-      OLLAMA_NUM_PARALLEL: '${GPU_INTEL_ARC_OLLAMA_NUM_PARALLEL:-1}'
-      ONEAPI_DEVICE_SELECTOR: "${GPU_INTEL_ARC_OLLAMA_ONEAPI_DEVICE_SELECTOR:-'level_zero:0'}"
-      ZES_ENABLE_SYSMAN: '${GPU_INTEL_ARC_OLLAMA_ZES_ENABLE_SYSMAN:-1}'
+      OLLAMA_MAX_LOADED_MODELS: '${GPU_OLLAMA_MAX_LOADED_MODELS:-3}'
+      OLLAMA_NUM_CTX: '${GPU_OLLAMA_NUM_CTX:-4096}'
+      OLLAMA_NUM_PARALLEL: '${GPU_OLLAMA_NUM_PARALLEL:-1}'
+      ONEAPI_DEVICE_SELECTOR: "${GPU_OLLAMA_ONEAPI_DEVICE_SELECTOR:-'level_zero:0'}"
+      ZES_ENABLE_SYSMAN: '${GPU_OLLAMA_ZES_ENABLE_SYSMAN:-1}'
     group_add: *default-groups
     healthcheck:
       test: >
@@ -183,7 +185,7 @@ services:
       timeout: 30s
       retries: 3
       start_period: 3m
-    image: '${GPU_INTEL_ARC_BACKEND_IMAGE:-docker.io/uberchuckie/ollama-intel-gpu:latest}'
+    image: '${GPU_BACKEND_IMAGE:-docker.io/uberchuckie/ollama-intel-gpu:latest}'
     networks:
       vlan:
         ipv4_address: '${STACK_AI_BACKEND_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.3}'
@@ -218,7 +220,7 @@ services:
     environment:
       <<: *default-environment-ai-no-proxy
       AUTOMATIC1111_BASE_URL: 'http://ai-image:7860'
-      AUTOMATIC1111_CFG_SCALE: '${GPU_INTEL_ARC_AUTOMATIC1111_CFG_SCALE:-2.0}'
+      AUTOMATIC1111_CFG_SCALE: '${GPU_AUTOMATIC1111_CFG_SCALE:-2.0}'
       AUTOMATIC1111_SAMPLER: 'DPM++ SDE Karras'
       AUTOMATIC1111_SCHEDULER: 'Karras'
       DEFAULT_MODELS: '${STACK_OLLAMA_DEFAULT_MODEL:-${STACK_OLLAMA_MODEL_LIST:-gemma3:4b}}'
@@ -227,13 +229,13 @@ services:
       ENABLE_DIRECT_CONNECTIONS: True
       ENABLE_IMAGE_GENERATION: True
       ENABLE_OLLAMA_API: True
-      ENABLE_OPENAI_API: '${{GPU_INTEL_ARC_FRONTEND_ENABLE_OPENAI_API:-False}}'
+      ENABLE_OPENAI_API: '${GPU_FRONTEND_ENABLE_OPENAI_API:-False}'
       ENABLE_PERSISTENT_CONFIG: False
       ENABLE_RAG_WEB_SEARCH: True
       IMAGE_GENERATION_ENGINE: 'automatic1111'
-      IMAGE_GENERATION_MODEL: '${{GPU_INTEL_ARC_FRONTEND_IMAGE_MODEL:-DreamShaperXL_Lightning-SFW.safetensors}}'
-      IMAGE_SIZE: '${GPU_INTEL_ARC_FRONTEND_IMAGE_SIZE:-1024x1024}'
-      IMAGE_STEPS: '${GPU_INTEL_ARC_FRONTEND_IMAGE_STEPS:-4}'
+      IMAGE_GENERATION_MODEL: '${GPU_FRONTEND_IMAGE_MODEL:-DreamShaperXL_Lightning-SFW.safetensors}'
+      IMAGE_SIZE: '${GPU_FRONTEND_IMAGE_SIZE:-1024x1024}'
+      IMAGE_STEPS: '${GPU_FRONTEND_IMAGE_STEPS:-4}'
       OLLAMA_BASE_URL: 'http://ai-backend:11434'
       RAG_WEB_SEARCH_ENGINE: 'searxng'
       SEARXNG_QUERY_URL: 'http://ai-web:8080/search?q=<query>'
@@ -274,7 +276,7 @@ services:
     <<: *default-settings
     cap_add:
       - 'SYS_NICE'
-    command: '${{ SDNEXT_ARGUMENT_LIST }}'
+    command: '${STACK_SDNEXT_ARGUMENT_LIST:-"--api --listen --use-ipex"}'
     depends_on:
       ai-model-image:
         condition: service_completed_successfully
@@ -282,11 +284,10 @@ services:
       - '/dev/dri:/dev/dri'
     environment:
       <<: *default-environment-ai-no-proxy
-      ARGUMENT_LIST: |
-        ${{ SDNEXT_ARGUMENT_LIST:-'--api --listen' }}
-        ${{ GPU_INTEL_ARC_SDNEXT_ARGUMENT_LIST:-'--use-ipex' }}
-      IPEX_FORCE_ATTENTION_SLICE: 1
-      IPEXRUN: true
+      CUDA_FORCE_ATTENTION_SLICE: '${GPU_CUDA_FORCE_ATTENTION_SLICE:-0}'
+      CUDA_VISIBLE_DEVICES: '${GPU_CUDA_VISIBLE_DEVICES}'
+      IPEX_FORCE_ATTENTION_SLICE: '${GPU_IPEX_FORCE_ATTENTION_SLICE:-1}'
+      IPEXRUN: '${GPU_IPEXRUN:-true}'
     healthcheck:
       test: >
         wget --quiet --tries=1 --timeout=5 'http://127.0.0.1:7860/sdapi/v1/status' || exit 1
@@ -295,7 +296,7 @@ services:
       retries: 3
       start_period: '${STACK_IMAGE_STARTUP_TIMEOUT:-10m}'
     group_add: *default-groups
-    image: '${GPU_INTEL_ARC_IMAGE_IMAGE:-docker.io/liutyi/sdnext-ipex:master}'
+    image: '${GPU_IMAGE_IMAGE:-docker.io/liutyi/sdnext-ipex:master}'
     networks:
       vlan:
         ipv4_address: '${STACK_IMAGE_IPV4:-${STACK_SUBNET_IPV4:-172.16.13}.5}'
@@ -357,7 +358,7 @@ services:
       SDNEXT_FORCE_DOWNLOAD: '${STACK_SDNEXT_FORCE_DOWNLOAD:-true}'
       SDNEXT_HOST: 'http://ai-image:7860'
       SDNEXT_MODEL_LIST: >-
-        ${GPU_INTEL_ARC_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"}
+        ${STACK_SDNEXT_MODEL_LIST:-"https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"}
       SDNEXT_MODEL_PATH: '${STACK_SDNEXT_MODEL_PATH:-/mnt/models/Stable-diffusion}'
     image: 'mcr.microsoft.com/powershell:lts-debian-bookworm'
     networks:
