@@ -25,26 +25,38 @@
 #>
 
 ## Localize the SD.Next force download flag.
-[Boolean] $forceDownload =
-if (@('1', 'ok', 'on', 't', 'true', 'y', 'yes') -contains "${env:SDNEXT_FORCE_DOWNLOAD}".Trim().ToLower()) {
-    $true
+[Boolean]$forceDownload =
+## If the SDNEXT_FORCE_DOWNLOAD environment variable is set to a truthy value, set the force download flag to true.
+if (@('1', 'ok', 'on', 't', 'true', 'y', 'yes') -contains "${env:SDNEXT_FORCE_DOWNLOAD}".Trim().ToLower())
+{
+    $true;
 }
-else { $false };
+
+## Otherwise, set the force download flag to false.
+else
+{
+    $false;
+};
 
 ## Localize the SD.Next host URL and sanitize it.
-[String] $sdnextUrl = "${env:SDNEXT_HOST}".TrimEnd('/').Trim();
+[String]$sdnextUrl = "${env:SDNEXT_HOST}".TrimEnd('/').Trim();
 
 ## Localize the SD.Next model path and sanitize it.
-[String] $sdnextModelPath = "${env:SDNEXT_MODEL_PATH}".Trim();
+[String]$sdnextModelPath = "${env:SDNEXT_MODEL_PATH}".Trim();
 
 ## Localize the list of SD.Next models to provision and sanitize it.
-[String[]] $sdnextModels = if ("${env:SDNEXT_MODEL_LIST}".Trim() -like '*,*') {
+[String[]]$sdnextModels = if ("${env:SDNEXT_MODEL_LIST}".Trim().Contains(','))
+{
     "${env:SDNEXT_MODEL_LIST}".Trim() -split ','
 }
-else { @("${env:SDNEXT_MODEL_LIST}".Trim()) };
+else
+{
+    @("${env:SDNEXT_MODEL_LIST}".Trim())
+};
 
 ## Ensure we have an SD.Next host URL to work with.
-if ('' -eq "${sdnextUrl}".Trim()) {
+if ('' -eq "${sdnextUrl}".Trim())
+{
 
     ## Write a message to the console indicating that the SDNEXT_HOST environment variable is not set.
     Write-Host 'ERROR: The SDNEXT_HOST environment variable is not set. Please set it to the SD.Next host URL and try again.' `
@@ -55,14 +67,19 @@ if ('' -eq "${sdnextUrl}".Trim()) {
 }
 
 ## Ensure we have an SD.Next model path to work with.
-if ('' -eq "${sdnextModelPath}".Trim()) { $sdnextModelPath = '/mnt/models/Stable-diffusion'; }
+if ('' -eq "${sdnextModelPath}".Trim())
+{
+    $sdnextModelPath = '/mnt/models/Stable-diffusion';
+}
 
 ## Ensure the SD.Next model path exists on the filesystem.  Create it if it does not exist.
-if (-not (Test-Path -Path "${sdnextModelPath}" -PathType Container)) {
+if (-not (Test-Path -Path "${sdnextModelPath}" -PathType Container))
+{
 
     ## Try to create the SD.Next model path directory.  If the creation fails,
     ## it will throw an exception that will be caught by the catch block.
-    try {
+    try
+    {
 
         ## Create the SD.Next model path directory.
         New-Item -Path "${sdnextModelPath}" -ItemType Directory -Force | Out-Null;
@@ -71,7 +88,8 @@ if (-not (Test-Path -Path "${sdnextModelPath}" -PathType Container)) {
         Write-Host "INFO: SD.Next model path [${sdnextModelPath}] did not exist, but was created successfully." `
             -ForegroundColor DarkGreen;
     }
-    catch {
+    catch
+    {
 
         ## Write a message to the console indicating that there was an error creating the SD.Next model path directory.
         Write-Host "ERROR: Failed to create SD.Next model path directory at [${sdnextModelPath}]. Exception: $_" `
@@ -83,7 +101,8 @@ if (-not (Test-Path -Path "${sdnextModelPath}" -PathType Container)) {
 }
 
 ## If we have no SD.Next models to provision, write a warning message to the console.
-if ($sdnextModels.Count -eq 0) {
+if ($sdnextModels.Count -eq 0)
+{
 
     ## Write a message to the console indicating that no SD.Next models were found to provision.
     Write-Host 'WARNING: No SD.Next models found to provision. Please set the SDNEXT_MODEL_LIST environment variable with a comma-separated list of model names and try again.' `
@@ -91,31 +110,35 @@ if ($sdnextModels.Count -eq 0) {
 }
 
 ## Otherwise, iterate through the list of SD.Next models and trigger their download via the API.
-else {
+else
+{
 
     ## Write a message to the console indicating that we are starting the model provisioning process for SD.Next.
-    Write-Host "INFO: Starting model provisioning process for $($sdnextModels.Count) SD.Next models." `
+    Write-Host "INFO: Starting model provisioning process for $( $sdnextModels.Count ) SD.Next models." `
         -ForegroundColor DarkGray;
 
     ## Iterate through the list of SD.Next models and trigger their download via the API.
-    foreach ($model in $sdnextModels) {
+    foreach ($model in $sdnextModels)
+    {
 
         ## Write a message to the console indicating that we are processing the current SD.Next model.
         Write-Host "INFO: Processing SD.Next model: ${model}" -ForegroundColor DarkGray;
 
         ## The models are URLs and we need to grab the filename from the URL to use as the model name. We'll parse the
         ## URI and extract the last segment of the path to get the filename, which will be used as the model name.
-        [String] $modelName = [System.IO.Path]::GetFileName([System.Uri]::new($model).AbsolutePath);
+        [String]$modelName = [System.IO.Path]::GetFileName([System.Uri]::new($model).AbsolutePath);
 
         ## Localize the absolute path where the SD.Next model should be
         ## stored by combining the SD.Next model path with the model name.
-        [String] $modelPath = Join-Path -ChildPath "${modelName}" -Path "${sdnextModelPath}";
+        [String]$modelPath = Join-Path -ChildPath "${modelName}" -Path "${sdnextModelPath}";
 
         ## Check for an already downloaded model at the specified path.
-        if (Test-Path -Path "${modelPath}" -PathType Leaf) {
+        if (Test-Path -Path "${modelPath}" -PathType Leaf)
+        {
 
             ## Check the force-download flag to determine if we should skip the download or not.
-            if (-not $forceDownload) {
+            if (-not $forceDownload)
+            {
 
                 ## Write a message to the console indicating that the SD.Next
                 ## model already exists and we are skipping the download.
@@ -125,7 +148,8 @@ else {
                 ## Skip to the next model in the list.
                 continue;
             }
-            else {
+            else
+            {
 
                 ## Write a message to the console indicating that we are forcing
                 ## the download of the SD.Next model even though it already exists.
@@ -134,7 +158,8 @@ else {
 
                 ## Try to remove the existing SD.Next model file.  If the removal fails,
                 ## it will throw an exception that will be caught by the catch block.
-                try {
+                try
+                {
 
                     ## Remove the existing SD.Next model file.
                     Remove-Item -Path "${modelPath}" -Force;
@@ -143,7 +168,8 @@ else {
                     Write-Host "INFO: Successfully removed existing SD.Next model file at [${modelPath}]." `
                         -ForegroundColor DarkGreen;
                 }
-                catch {
+                catch
+                {
 
                     ## We'll have to skip the download of this model since we can't remove the
                     ## existing file, so we'll write a message to the console indicating that we
@@ -159,7 +185,8 @@ else {
 
         ## Try to trigger the download of the SD.Next model via the API.  If the download
         ## fails, it will throw an exception that will be caught by the catch block.
-        try {
+        try
+        {
 
             ## Write a message to the console indicating that we are starting
             ## the download of the SD.Next model from the provided URL via the API.
@@ -173,7 +200,8 @@ else {
             Write-Host "DONE: Successfully downloaded SD.Next model [${modelName}] to [${modelPath}]." `
                 -ForegroundColor DarkGreen;
         }
-        catch {
+        catch
+        {
 
             ## Write a message to the console indicating that there was an error updating the SD.Next image model via the API.
             Write-Host "ERROR: Failed to trigger download for ${model} via SD.Next API with: ${_}" `
